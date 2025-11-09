@@ -25,6 +25,7 @@ export class StrokeRenderer {
   private logicalHeight: number = 0; // Store logical height for Y-axis flip
   private initialPanX: number = 0; // Store initial centered position for reset
   private initialPanY: number = 0;
+  private canvasRotation: number = 0; // Canvas rotation in degrees
   private imageRenderer: ImageRenderer = new ImageRenderer(); // Handle image loading and rendering
 
   constructor(canvas: HTMLCanvasElement) {
@@ -215,6 +216,17 @@ export class StrokeRenderer {
     this.userScale = 1;
     this.panX = this.initialPanX;
     this.panY = this.initialPanY;
+    this.canvasRotation = 0;
+    this.redraw();
+  }
+
+  rotateClockwise(): void {
+    this.canvasRotation = (this.canvasRotation + 90) % 360;
+    this.redraw();
+  }
+
+  rotateCounterClockwise(): void {
+    this.canvasRotation = (this.canvasRotation - 90 + 360) % 360;
     this.redraw();
   }
 
@@ -376,8 +388,21 @@ export class StrokeRenderer {
 
     this.clear();
 
-    // Apply canvas-level transformations for pan and user zoom
+    // Apply canvas-level transformations
     this.ctx.save();
+
+    // Apply rotation around the viewport center FIRST (before pan/zoom)
+    // This makes rotation happen around what's currently visible
+    if (this.canvasRotation !== 0) {
+      const rect = this.canvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      this.ctx.translate(centerX, centerY);
+      this.ctx.rotate((this.canvasRotation * Math.PI) / 180);
+      this.ctx.translate(-centerX, -centerY);
+    }
+
+    // Then apply pan and user zoom
     this.ctx.translate(this.panX, this.panY);
     this.ctx.scale(this.userScale, this.userScale);
 

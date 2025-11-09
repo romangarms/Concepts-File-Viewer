@@ -40,11 +40,21 @@ export function useStrokeRenderer() {
     rendererRef.current?.resetView();
   }, []);
 
+  const rotateClockwise = useCallback(() => {
+    rendererRef.current?.rotateClockwise();
+  }, []);
+
+  const rotateCounterClockwise = useCallback(() => {
+    rendererRef.current?.rotateCounterClockwise();
+  }, []);
+
   return {
     canvasRef,
     render,
     zoomIn,
     zoomOut,
     resetView,
+    rotateClockwise,
+    rotateCounterClockwise,
   };
 }

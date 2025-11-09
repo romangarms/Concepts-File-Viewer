@@ -8,7 +8,7 @@ import type { DrawingData } from '../types.js';
 export function ViewerPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { canvasRef, render, zoomIn, zoomOut, resetView } = useStrokeRenderer();
+  const { canvasRef, render, zoomIn, zoomOut, resetView, rotateClockwise, rotateCounterClockwise } = useStrokeRenderer();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; show: boolean }>({
     message: '',
     type: 'success',
@@ -72,6 +72,8 @@ export function ViewerPage() {
         onZoomOut={zoomOut}
         onReset={resetView}
         onBack={handleBack}
+        onRotateClockwise={rotateClockwise}
+        onRotateCounterClockwise={rotateCounterClockwise}
       />
       <Toast
         message={toast.message}
