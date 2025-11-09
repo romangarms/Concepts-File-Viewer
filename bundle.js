@@ -45127,6 +45127,8 @@ var StrokeRenderer = class {
     this.initialPanX = 0;
     // Store initial centered position for reset
     this.initialPanY = 0;
+    this.canvasRotation = 0;
+    // Canvas rotation in degrees
     this.imageRenderer = new ImageRenderer();
     this.canvas = canvas;
     const ctx = canvas.getContext("2d");
@@ -45266,6 +45268,15 @@ var StrokeRenderer = class {
     this.userScale = 1;
     this.panX = this.initialPanX;
     this.panY = this.initialPanY;
+    this.canvasRotation = 0;
+    this.redraw();
+  }
+  rotateClockwise() {
+    this.canvasRotation = (this.canvasRotation + 90) % 360;
+    this.redraw();
+  }
+  rotateCounterClockwise() {
+    this.canvasRotation = (this.canvasRotation - 90 + 360) % 360;
     this.redraw();
   }
   /**
@@ -45388,6 +45399,14 @@ var StrokeRenderer = class {
       return;
     this.clear();
     this.ctx.save();
+    if (this.canvasRotation !== 0) {
+      const rect = this.canvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      this.ctx.translate(centerX, centerY);
+      this.ctx.rotate(this.canvasRotation * Math.PI / 180);
+      this.ctx.translate(-centerX, -centerY);
+    }
     this.ctx.translate(this.panX, this.panY);
     this.ctx.scale(this.userScale, this.userScale);
     this.ctx.translate(0, this.logicalHeight);
@@ -45484,23 +45503,33 @@ function useStrokeRenderer() {
   const resetView = (0, import_react3.useCallback)(() => {
     rendererRef.current?.resetView();
   }, []);
+  const rotateClockwise = (0, import_react3.useCallback)(() => {
+    rendererRef.current?.rotateClockwise();
+  }, []);
+  const rotateCounterClockwise = (0, import_react3.useCallback)(() => {
+    rendererRef.current?.rotateCounterClockwise();
+  }, []);
   return {
     canvasRef,
     render,
     zoomIn,
     zoomOut,
-    resetView
+    resetView,
+    rotateClockwise,
+    rotateCounterClockwise
   };
 }
 
 // src/components/ZoomControls.tsx
 init_node_shims();
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
-function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack }) {
+function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack, onRotateClockwise, onRotateCounterClockwise }) {
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "zoom-controls", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onZoomIn, className: "zoom-button", title: "Zoom In", children: "+" }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onZoomOut, className: "zoom-button", title: "Zoom Out", children: "\u2212" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onReset, className: "zoom-button", title: "Reset View", children: "\u27F2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onRotateCounterClockwise, className: "zoom-button", title: "Rotate Counter-Clockwise", children: "\u21B6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onRotateClockwise, className: "zoom-button", title: "Rotate Clockwise", children: "\u21B7" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onReset, className: "zoom-button", title: "Reset View", children: "\u2316" }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onBack, className: "zoom-button", title: "Back to File Selector", children: "\u2190" })
   ] });
 }
@@ -45526,7 +45555,7 @@ var import_jsx_runtime5 = __toESM(require_jsx_runtime());
 function ViewerPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { canvasRef, render, zoomIn, zoomOut, resetView } = useStrokeRenderer();
+  const { canvasRef, render, zoomIn, zoomOut, resetView, rotateClockwise, rotateCounterClockwise } = useStrokeRenderer();
   const [toast, setToast] = (0, import_react5.useState)({
     message: "",
     type: "success",
@@ -45578,7 +45607,9 @@ function ViewerPage() {
         onZoomIn: zoomIn,
         onZoomOut: zoomOut,
         onReset: resetView,
-        onBack: handleBack
+        onBack: handleBack,
+        onRotateClockwise: rotateClockwise,
+        onRotateCounterClockwise: rotateCounterClockwise
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
