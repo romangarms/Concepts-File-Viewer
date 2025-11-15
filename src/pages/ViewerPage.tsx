@@ -57,7 +57,18 @@ export function ViewerPage() {
   }, [location.state, navigate, render]);
 
   const handleBack = () => {
-    navigate('/');
+    // Check if we came from the gallery
+    const fromGallery = location.state?.fromGallery;
+    const galleryPath = location.state?.galleryPath as string[] | undefined;
+
+    if (fromGallery && galleryPath) {
+      // Navigate back to gallery with the path in URL
+      const encodedPath = galleryPath.map(encodeURIComponent).join('/');
+      navigate(`/gallery/${encodedPath}`);
+    } else {
+      // Navigate to home
+      navigate('/');
+    }
   };
 
   const hideToast = () => {

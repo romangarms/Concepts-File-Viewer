@@ -77,3 +77,8 @@ export interface ConceptPlists {
   resources: any;
   metadata: any;
 }
+
+// Legacy types - kept for reference but no longer used
+// These were used with webkitdirectory before File System Access API
+// export interface ConceptFileInfo { ... }
+// export interface DirectoryNode { ... }

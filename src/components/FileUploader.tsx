@@ -33,12 +33,7 @@ export function FileUploader() {
   }, [setupDragAndDrop, setupFileInput, navigate]);
 
   return (
-    <div className="container">
-      <header>
-        <h1>Concepts File Viewer</h1>
-        <p>View iOS Concepts app drawings in your browser</p>
-      </header>
-
+    <>
       <div ref={dropZoneRef} id="drop-zone" className="drop-zone">
         <div className="drop-zone-content">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -66,6 +61,6 @@ export function FileUploader() {
           {status.message}
         </div>
       )}
-    </div>
+    </>
   );
 }
