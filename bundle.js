@@ -3713,15 +3713,15 @@ var require_react_dom_client_production = __commonJS({
         valueField
       );
       if (!node.hasOwnProperty(valueField) && "undefined" !== typeof descriptor && "function" === typeof descriptor.get && "function" === typeof descriptor.set) {
-        var get = descriptor.get, set = descriptor.set;
+        var get2 = descriptor.get, set2 = descriptor.set;
         Object.defineProperty(node, valueField, {
           configurable: true,
           get: function() {
-            return get.call(this);
+            return get2.call(this);
           },
           set: function(value) {
             currentValue = "" + value;
-            set.call(this, value);
+            set2.call(this, value);
           }
         });
         Object.defineProperty(node, valueField, {
@@ -17412,6 +17412,11 @@ function useNavigateUnstable() {
   return navigate;
 }
 var OutletContext = React2.createContext(null);
+function useParams() {
+  let { matches } = React2.useContext(RouteContext);
+  let routeMatch = matches[matches.length - 1];
+  return routeMatch ? routeMatch.params : {};
+}
 function useResolvedPath(to, { relative } = {}) {
   let { matches } = React2.useContext(RouteContext);
   let { pathname: locationPathname } = useLocation();
@@ -18220,7 +18225,7 @@ function sortKeys(obj) {
   return sorted;
 }
 function dedupeLinkDescriptors(descriptors, preloads) {
-  let set = /* @__PURE__ */ new Set();
+  let set2 = /* @__PURE__ */ new Set();
   let preloadsSet = new Set(preloads);
   return descriptors.reduce((deduped, descriptor) => {
     let alreadyModulePreload = preloads && !isPageLinkDescriptor(descriptor) && descriptor.as === "script" && descriptor.href && preloadsSet.has(descriptor.href);
@@ -18228,8 +18233,8 @@ function dedupeLinkDescriptors(descriptors, preloads) {
       return deduped;
     }
     let key = JSON.stringify(sortKeys(descriptor));
-    if (!set.has(key)) {
-      set.add(key);
+    if (!set2.has(key)) {
+      set2.add(key);
       deduped.push({ key, link: descriptor });
     }
     return deduped;
@@ -19044,6 +19049,7 @@ init_node_shims();
 
 // src/pages/Home.tsx
 init_node_shims();
+var import_react4 = __toESM(require_react());
 
 // src/components/FileUploader.tsx
 init_node_shims();
@@ -19565,11 +19571,7 @@ function FileUploader() {
     setupDragAndDrop(dropZoneRef.current, handleFileLoaded, handleError);
     setupFileInput(fileInputRef.current, handleFileLoaded, handleError);
   }, [setupDragAndDrop, setupFileInput, navigate]);
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "container", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { children: "Concepts File Viewer" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "View iOS Concepts app drawings in your browser" })
-    ] }),
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: dropZoneRef, id: "drop-zone", className: "drop-zone", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "drop-zone-content", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "64", height: "64", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
@@ -19594,19 +19596,222 @@ function FileUploader() {
   ] });
 }
 
-// src/pages/Home.tsx
+// src/components/DirectorySelector.tsx
+init_node_shims();
+var import_react3 = __toESM(require_react());
+
+// src/utils/handleStorage.ts
+init_node_shims();
+
+// node_modules/idb-keyval/dist/index.js
+init_node_shims();
+function promisifyRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.oncomplete = request.onsuccess = () => resolve(request.result);
+    request.onabort = request.onerror = () => reject(request.error);
+  });
+}
+function createStore(dbName, storeName) {
+  let dbp;
+  const getDB = () => {
+    if (dbp)
+      return dbp;
+    const request = indexedDB.open(dbName);
+    request.onupgradeneeded = () => request.result.createObjectStore(storeName);
+    dbp = promisifyRequest(request);
+    dbp.then((db) => {
+      db.onclose = () => dbp = void 0;
+    }, () => {
+    });
+    return dbp;
+  };
+  return (txMode, callback) => getDB().then((db) => callback(db.transaction(storeName, txMode).objectStore(storeName)));
+}
+var defaultGetStoreFunc;
+function defaultGetStore() {
+  if (!defaultGetStoreFunc) {
+    defaultGetStoreFunc = createStore("keyval-store", "keyval");
+  }
+  return defaultGetStoreFunc;
+}
+function get(key, customStore = defaultGetStore()) {
+  return customStore("readonly", (store) => promisifyRequest(store.get(key)));
+}
+function set(key, value, customStore = defaultGetStore()) {
+  return customStore("readwrite", (store) => {
+    store.put(value, key);
+    return promisifyRequest(store.transaction);
+  });
+}
+function del(key, customStore = defaultGetStore()) {
+  return customStore("readwrite", (store) => {
+    store.delete(key);
+    return promisifyRequest(store.transaction);
+  });
+}
+
+// src/utils/handleStorage.ts
+var ROOT_HANDLE_KEY = "concepts-root-directory-handle";
+function isFileSystemAccessSupported() {
+  return "showDirectoryPicker" in window;
+}
+async function verifyPermission(handle) {
+  const options = { mode: "read" };
+  if (await handle.queryPermission(options) === "granted") {
+    return true;
+  }
+  if (await handle.requestPermission(options) === "granted") {
+    return true;
+  }
+  return false;
+}
+async function saveDirectoryHandle(rootHandle) {
+  try {
+    await set(ROOT_HANDLE_KEY, rootHandle);
+  } catch (error) {
+    console.error("Failed to save directory handle:", error);
+    throw error;
+  }
+}
+async function restoreDirectoryHandle() {
+  try {
+    const rootHandle = await get(ROOT_HANDLE_KEY);
+    if (!rootHandle) {
+      return null;
+    }
+    const hasPermission = await verifyPermission(rootHandle);
+    if (!hasPermission) {
+      await clearDirectoryState();
+      return null;
+    }
+    return rootHandle;
+  } catch (error) {
+    console.error("Failed to restore directory handle:", error);
+    await clearDirectoryState();
+    return null;
+  }
+}
+async function clearDirectoryState() {
+  try {
+    await del(ROOT_HANDLE_KEY);
+  } catch (error) {
+    console.error("Failed to clear directory state:", error);
+  }
+}
+async function navigateToPath(rootHandle, path) {
+  let currentHandle = rootHandle;
+  for (const dirName of path) {
+    try {
+      currentHandle = await currentHandle.getDirectoryHandle(dirName);
+    } catch (error) {
+      throw new Error(`Failed to navigate to directory: ${path.join("/")}`);
+    }
+  }
+  return currentHandle;
+}
+
+// src/components/DirectorySelector.tsx
 var import_jsx_runtime2 = __toESM(require_jsx_runtime());
+function DirectorySelector() {
+  const navigate = useNavigate();
+  const [error, setError] = (0, import_react3.useState)(null);
+  const handleSelectDirectory = async () => {
+    if (!isFileSystemAccessSupported()) {
+      setError(
+        'Directory browsing is only supported in Chrome and Edge browsers. Please use the "Single File" tab to open individual .concept files.'
+      );
+      return;
+    }
+    setError(null);
+    try {
+      const dirHandle = await window.showDirectoryPicker({
+        mode: "read"
+      });
+      await saveDirectoryHandle(dirHandle);
+      navigate("/gallery");
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.name === "AbortError") {
+          return;
+        }
+        setError(err.message);
+      } else {
+        setError("Failed to select directory");
+      }
+    }
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "directory-selector", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "directory-selector-content", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "80", height: "80", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { children: "Browse Concepts Directory" }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: "Select a directory containing .concept files to browse with thumbnails. Subdirectories will be loaded as you navigate into them." }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "button", onClick: handleSelectDirectory, children: "Select Directory" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "status error", style: { marginTop: "1rem" }, children: error }),
+    !isFileSystemAccessSupported() && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "status error", style: { marginTop: "1rem" }, children: [
+      "Directory browsing requires Chrome or Edge browser.",
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("br", {}),
+      'Use the "Single File" tab for other browsers.'
+    ] })
+  ] }) });
+}
+
+// src/pages/Home.tsx
+var import_jsx_runtime3 = __toESM(require_jsx_runtime());
+var TAB_STORAGE_KEY = "concepts-active-tab";
 function Home() {
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FileUploader, {});
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = (0, import_react4.useState)(() => {
+    const saved = localStorage.getItem(TAB_STORAGE_KEY);
+    return saved || "single";
+  });
+  (0, import_react4.useEffect)(() => {
+    localStorage.setItem(TAB_STORAGE_KEY, activeTab);
+  }, [activeTab]);
+  const handleTabChange = async (tab) => {
+    setActiveTab(tab);
+    if (tab === "directory") {
+      const rootHandle = await restoreDirectoryHandle();
+      if (rootHandle) {
+        navigate("/gallery");
+      }
+    }
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "container", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("header", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h1", { children: "Concepts File Viewer" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "View iOS Concepts app drawings in your browser" })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "tabs", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "button",
+        {
+          className: `tab ${activeTab === "single" ? "active" : ""}`,
+          onClick: () => handleTabChange("single"),
+          children: "Single File"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "button",
+        {
+          className: `tab ${activeTab === "directory" ? "active" : ""}`,
+          onClick: () => handleTabChange("directory"),
+          children: "Browse Directory"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "tab-content", children: [
+      activeTab === "single" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(FileUploader, {}),
+      activeTab === "directory" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(DirectorySelector, {})
+    ] })
+  ] });
 }
 
 // src/pages/ViewerPage.tsx
 init_node_shims();
-var import_react5 = __toESM(require_react());
+var import_react7 = __toESM(require_react());
 
 // src/hooks/useStrokeRenderer.ts
 init_node_shims();
-var import_react3 = __toESM(require_react());
+var import_react5 = __toESM(require_react());
 
 // src/strokeRenderer.ts
 init_node_shims();
@@ -45474,9 +45679,9 @@ var StrokeRenderer = class {
 
 // src/hooks/useStrokeRenderer.ts
 function useStrokeRenderer() {
-  const canvasRef = (0, import_react3.useRef)(null);
-  const rendererRef = (0, import_react3.useRef)(null);
-  (0, import_react3.useEffect)(() => {
+  const canvasRef = (0, import_react5.useRef)(null);
+  const rendererRef = (0, import_react5.useRef)(null);
+  (0, import_react5.useEffect)(() => {
     if (canvasRef.current && !rendererRef.current) {
       rendererRef.current = new StrokeRenderer(canvasRef.current);
     }
@@ -45488,25 +45693,25 @@ function useStrokeRenderer() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-  const render = (0, import_react3.useCallback)(async (data2) => {
+  const render = (0, import_react5.useCallback)(async (data2) => {
     if (rendererRef.current) {
       rendererRef.current.resize();
       await rendererRef.current.render(data2);
     }
   }, []);
-  const zoomIn = (0, import_react3.useCallback)(() => {
+  const zoomIn = (0, import_react5.useCallback)(() => {
     rendererRef.current?.zoomIn();
   }, []);
-  const zoomOut = (0, import_react3.useCallback)(() => {
+  const zoomOut = (0, import_react5.useCallback)(() => {
     rendererRef.current?.zoomOut();
   }, []);
-  const resetView = (0, import_react3.useCallback)(() => {
+  const resetView = (0, import_react5.useCallback)(() => {
     rendererRef.current?.resetView();
   }, []);
-  const rotateClockwise = (0, import_react3.useCallback)(() => {
+  const rotateClockwise = (0, import_react5.useCallback)(() => {
     rendererRef.current?.rotateClockwise();
   }, []);
-  const rotateCounterClockwise = (0, import_react3.useCallback)(() => {
+  const rotateCounterClockwise = (0, import_react5.useCallback)(() => {
     rendererRef.current?.rotateCounterClockwise();
   }, []);
   return {
@@ -45522,24 +45727,24 @@ function useStrokeRenderer() {
 
 // src/components/ZoomControls.tsx
 init_node_shims();
-var import_jsx_runtime3 = __toESM(require_jsx_runtime());
+var import_jsx_runtime4 = __toESM(require_jsx_runtime());
 function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack, onRotateClockwise, onRotateCounterClockwise }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "zoom-controls", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onZoomIn, className: "zoom-button", title: "Zoom In", children: "+" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onZoomOut, className: "zoom-button", title: "Zoom Out", children: "\u2212" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onRotateCounterClockwise, className: "zoom-button", title: "Rotate Counter-Clockwise", children: "\u21B6" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onRotateClockwise, className: "zoom-button", title: "Rotate Clockwise", children: "\u21B7" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onReset, className: "zoom-button", title: "Reset View", children: "\u2316" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { onClick: onBack, className: "zoom-button", title: "Back to File Selector", children: "\u2190" })
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "zoom-controls", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onZoomIn, className: "zoom-button", title: "Zoom In", children: "+" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onZoomOut, className: "zoom-button", title: "Zoom Out", children: "\u2212" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onRotateCounterClockwise, className: "zoom-button", title: "Rotate Counter-Clockwise", children: "\u21B6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onRotateClockwise, className: "zoom-button", title: "Rotate Clockwise", children: "\u21B7" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onReset, className: "zoom-button", title: "Reset View", children: "\u2316" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { onClick: onBack, className: "zoom-button", title: "Back to File Selector", children: "\u2190" })
   ] });
 }
 
 // src/components/Toast.tsx
 init_node_shims();
-var import_react4 = __toESM(require_react());
-var import_jsx_runtime4 = __toESM(require_jsx_runtime());
+var import_react6 = __toESM(require_react());
+var import_jsx_runtime5 = __toESM(require_jsx_runtime());
 function Toast({ message, type, show, onHide }) {
-  (0, import_react4.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (show) {
       const timer = setTimeout(() => {
         onHide();
@@ -45547,21 +45752,21 @@ function Toast({ message, type, show, onHide }) {
       return () => clearTimeout(timer);
     }
   }, [show, onHide]);
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: `status ${type} ${show ? "show" : ""}`, children: message });
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: `status ${type} ${show ? "show" : ""}`, children: message });
 }
 
 // src/pages/ViewerPage.tsx
-var import_jsx_runtime5 = __toESM(require_jsx_runtime());
+var import_jsx_runtime6 = __toESM(require_jsx_runtime());
 function ViewerPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { canvasRef, render, zoomIn, zoomOut, resetView, rotateClockwise, rotateCounterClockwise } = useStrokeRenderer();
-  const [toast, setToast] = (0, import_react5.useState)({
+  const [toast, setToast] = (0, import_react7.useState)({
     message: "",
     type: "success",
     show: false
   });
-  (0, import_react5.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     let data2 = location.state?.data;
     if (!data2) {
       const savedData = localStorage.getItem("conceptsDrawingData");
@@ -45574,6 +45779,14 @@ function ViewerPage() {
       }
     } else {
       localStorage.setItem("conceptsDrawingData", JSON.stringify(data2));
+      const fromGallery = location.state?.fromGallery;
+      const galleryPath = location.state?.galleryPath;
+      if (fromGallery && galleryPath) {
+        localStorage.setItem("conceptsNavigationState", JSON.stringify({
+          fromGallery,
+          galleryPath
+        }));
+      }
     }
     if (!data2) {
       setToast({
@@ -45594,14 +45807,35 @@ function ViewerPage() {
     render(data2);
   }, [location.state, navigate, render]);
   const handleBack = () => {
-    navigate("/");
+    let fromGallery = location.state?.fromGallery;
+    let galleryPath = location.state?.galleryPath;
+    if (!fromGallery || !galleryPath) {
+      const savedNavState = localStorage.getItem("conceptsNavigationState");
+      if (savedNavState) {
+        try {
+          const parsed = JSON.parse(savedNavState);
+          fromGallery = parsed.fromGallery;
+          galleryPath = parsed.galleryPath;
+        } catch (error) {
+          console.error("Failed to parse saved navigation state:", error);
+        }
+      }
+    }
+    if (fromGallery && galleryPath) {
+      const encodedPath = galleryPath.map(encodeURIComponent).join("/");
+      localStorage.removeItem("conceptsNavigationState");
+      navigate(`/gallery/${encodedPath}`);
+    } else {
+      localStorage.removeItem("conceptsNavigationState");
+      navigate("/");
+    }
   };
   const hideToast = () => {
     setToast((prev) => ({ ...prev, show: false }));
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("canvas", { ref: canvasRef, id: "canvas" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("canvas", { ref: canvasRef, id: "canvas" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
       ZoomControls,
       {
         onZoomIn: zoomIn,
@@ -45612,7 +45846,7 @@ function ViewerPage() {
         onRotateCounterClockwise: rotateCounterClockwise
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
       Toast,
       {
         message: toast.message,
@@ -45624,17 +45858,518 @@ function ViewerPage() {
   ] });
 }
 
+// src/pages/GalleryPage.tsx
+init_node_shims();
+var import_react10 = __toESM(require_react());
+
+// src/components/DirectoryBrowser.tsx
+init_node_shims();
+var import_react8 = __toESM(require_react());
+
+// src/components/ThumbnailGrid.tsx
+init_node_shims();
+var import_jsx_runtime7 = __toESM(require_jsx_runtime());
+function ThumbnailGrid({
+  files,
+  subdirectories,
+  onFileClick,
+  onDirectoryClick
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "thumbnail-grid", children: [
+    subdirectories.map((subdir) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+      "div",
+      {
+        className: "thumbnail-card directory-card",
+        onClick: () => onDirectoryClick(subdir),
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-content folder-icon", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: "80", height: "80", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-name", children: subdir.name }),
+          subdir.fileCount !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "thumbnail-count", children: [
+            subdir.fileCount,
+            " files"
+          ] })
+        ]
+      },
+      subdir.name
+    )),
+    files.map((file) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+      "div",
+      {
+        className: "thumbnail-card file-card",
+        onClick: () => onFileClick(file),
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-content", children: file.isLoading ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-loading", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "spinner" }) }) : file.thumbnail ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("img", { src: file.thumbnail, alt: file.name }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-placeholder", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: "60", height: "60", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "14 2 14 8 20 8" })
+          ] }) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "thumbnail-name", children: file.name })
+        ]
+      },
+      file.fullName
+    )),
+    files.length === 0 && subdirectories.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "empty-state", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "No .concept files found in this directory" }) })
+  ] });
+}
+
+// src/utils/lazyDirectoryScanner.ts
+init_node_shims();
+
+// src/utils/thumbnailExtractor.ts
+init_node_shims();
+import JSZip2 from "jszip";
+async function extractThumbnail(file) {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip2.loadAsync(arrayBuffer);
+    const thumbFile = zip.file("Thumb.jpg");
+    if (!thumbFile) {
+      console.warn(`No Thumb.jpg found in ${file.name}`);
+      return null;
+    }
+    const thumbData = await thumbFile.async("uint8array");
+    const base64 = btoa(
+      Array.from(thumbData).map((byte) => String.fromCharCode(byte)).join("")
+    );
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (error) {
+    console.error(`Failed to extract thumbnail from ${file.name}:`, error);
+    return null;
+  }
+}
+
+// src/utils/lazyDirectoryScanner.ts
+async function scanDirectoryLazy(dirHandle, onProgress) {
+  const files = [];
+  const subdirectories = [];
+  let count = 0;
+  try {
+    for await (const entry of dirHandle.values()) {
+      if (entry.name.startsWith(".")) {
+        continue;
+      }
+      count++;
+      if (onProgress) {
+        onProgress(count);
+      }
+      if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".concept")) {
+        const file = await entry.getFile();
+        files.push({
+          name: entry.name.replace(/\.concept$/i, ""),
+          fullName: entry.name,
+          fileHandle: entry,
+          size: file.size,
+          modified: file.lastModified
+          // thumbnail will be loaded on-demand
+        });
+      } else if (entry.kind === "directory") {
+        subdirectories.push({
+          name: entry.name,
+          dirHandle: entry
+          // fileCount will be counted on-demand if needed
+        });
+      }
+    }
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    subdirectories.sort((a, b) => a.name.localeCompare(b.name));
+    return { files, subdirectories };
+  } catch (error) {
+    console.error("Failed to scan directory:", error);
+    throw new Error("Failed to read directory contents");
+  }
+}
+async function loadThumbnailForFile(fileInfo) {
+  if (fileInfo.thumbnail || fileInfo.isLoading) {
+    return;
+  }
+  fileInfo.isLoading = true;
+  try {
+    const file = await fileInfo.fileHandle.getFile();
+    const thumbnail = await extractThumbnail(file);
+    fileInfo.thumbnail = thumbnail || void 0;
+  } catch (error) {
+    console.error(`Failed to load thumbnail for ${fileInfo.name}:`, error);
+    fileInfo.thumbnail = void 0;
+  } finally {
+    fileInfo.isLoading = false;
+  }
+}
+async function loadThumbnails(files, onProgress, signal) {
+  const total = files.length;
+  let completed = 0;
+  const batchSize = 5;
+  for (let i = 0; i < files.length; i += batchSize) {
+    if (signal?.aborted) {
+      throw new Error("Thumbnail loading cancelled");
+    }
+    const batch = files.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (fileInfo) => {
+        await loadThumbnailForFile(fileInfo);
+        completed++;
+        if (onProgress) {
+          onProgress(completed, total);
+        }
+      })
+    );
+  }
+}
+function getPathBreadcrumbs(path) {
+  const breadcrumbs = [
+    { name: "Root", path: [] }
+  ];
+  for (let i = 0; i < path.length; i++) {
+    breadcrumbs.push({
+      name: path[i],
+      path: path.slice(0, i + 1)
+    });
+  }
+  return breadcrumbs;
+}
+
+// src/components/DirectoryBrowser.tsx
+var import_jsx_runtime8 = __toESM(require_jsx_runtime());
+function DirectoryBrowser({
+  currentHandle,
+  currentPath,
+  onNavigateTo,
+  onNavigateInto,
+  onNavigateUp,
+  onSelectDifferentDirectory
+}) {
+  const navigate = useNavigate();
+  const { processFile } = useFileHandler();
+  const [contents, setContents] = (0, import_react8.useState)(null);
+  const [isScanning, setIsScanning] = (0, import_react8.useState)(false);
+  const [isLoadingThumbnails, setIsLoadingThumbnails] = (0, import_react8.useState)(false);
+  const [error, setError] = (0, import_react8.useState)(null);
+  (0, import_react8.useEffect)(() => {
+    if (!currentHandle) {
+      return;
+    }
+    let cancelled = false;
+    const loadDirectory = async () => {
+      setIsScanning(true);
+      setError(null);
+      try {
+        const directoryContents = await scanDirectoryLazy(currentHandle);
+        if (cancelled)
+          return;
+        setContents(directoryContents);
+        setIsScanning(false);
+        setIsLoadingThumbnails(true);
+        await loadThumbnails(directoryContents.files, () => {
+          setContents({ ...directoryContents });
+        });
+        if (cancelled)
+          return;
+        setIsLoadingThumbnails(false);
+      } catch (err) {
+        if (cancelled)
+          return;
+        console.error("Failed to load directory:", err);
+        setError(err instanceof Error ? err.message : "Failed to load directory");
+        setIsScanning(false);
+        setIsLoadingThumbnails(false);
+      }
+    };
+    loadDirectory();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentHandle]);
+  const breadcrumbs = getPathBreadcrumbs(currentPath);
+  const handleBreadcrumbClick = (path) => {
+    onNavigateTo(path).catch((err) => {
+      console.error("Navigation failed:", err);
+      setError("Failed to navigate to directory");
+    });
+  };
+  const handleDirectoryClick = (directory) => {
+    onNavigateInto(directory.name).catch((err) => {
+      console.error("Navigation failed:", err);
+      setError("Failed to enter directory");
+    });
+  };
+  const handleFileClick = async (file) => {
+    try {
+      const fileObj = await file.fileHandle.getFile();
+      const data2 = await processFile(fileObj);
+      navigate("/viewer", {
+        state: {
+          data: data2,
+          fromGallery: true,
+          galleryPath: currentPath
+        }
+      });
+    } catch (error2) {
+      console.error("Failed to load concept file:", error2);
+      alert(`Failed to load file: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+    }
+  };
+  const handleBack = () => {
+    if (currentPath.length > 0) {
+      onNavigateUp().catch((err) => {
+        console.error("Navigation failed:", err);
+        setError("Failed to navigate up");
+      });
+    }
+  };
+  if (error) {
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "status error", style: { margin: "2rem" }, children: error });
+  }
+  if (!contents) {
+    return null;
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gallery-container", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "breadcrumb", style: { display: "flex", alignItems: "center", gap: "0.5rem" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: "0.5rem", flex: 1 }, children: [
+        currentPath.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { className: "back-button", onClick: handleBack, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("polyline", { points: "15 18 9 12 15 6" }) }),
+          "Back"
+        ] }),
+        breadcrumbs.map((crumb, index) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "breadcrumb-item", children: [
+          index > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "breadcrumb-separator", children: "/" }),
+          index === breadcrumbs.length - 1 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "breadcrumb-current", children: crumb.name }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "a",
+            {
+              className: "breadcrumb-link",
+              onClick: () => handleBreadcrumbClick(crumb.path),
+              children: crumb.name
+            }
+          )
+        ] }, crumb.path.join("/"))),
+        isLoadingThumbnails && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: "0.85rem", color: "#667eea" }, children: "Loading thumbnails..." })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          className: "button secondary",
+          style: { padding: "0.5rem 1rem", fontSize: "0.85rem", whiteSpace: "nowrap" },
+          onClick: onSelectDifferentDirectory,
+          children: "Select Different Directory"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "gallery-content", children: isScanning ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { textAlign: "center", padding: "4rem 2rem" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "spinner", style: { margin: "0 auto 1rem" } }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "Scanning directory..." })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      ThumbnailGrid,
+      {
+        files: contents.files,
+        subdirectories: contents.subdirectories,
+        onFileClick: handleFileClick,
+        onDirectoryClick: handleDirectoryClick
+      }
+    ) })
+  ] });
+}
+
+// src/hooks/useGalleryState.ts
+init_node_shims();
+var import_react9 = __toESM(require_react());
+function useGalleryState(pathFromUrl) {
+  const [rootHandle, setRootHandle] = (0, import_react9.useState)(null);
+  const [currentHandle, setCurrentHandle] = (0, import_react9.useState)(null);
+  const [isRestoring, setIsRestoring] = (0, import_react9.useState)(true);
+  const [error, setError] = (0, import_react9.useState)(null);
+  (0, import_react9.useEffect)(() => {
+    restoreDirectoryHandle().then((handle) => {
+      setRootHandle(handle);
+    }).catch((err) => {
+      console.error("Failed to restore directory handle:", err);
+      setError("Failed to restore directory");
+    }).finally(() => {
+      setIsRestoring(false);
+    });
+  }, []);
+  (0, import_react9.useEffect)(() => {
+    if (!rootHandle) {
+      setCurrentHandle(null);
+      return;
+    }
+    let cancelled = false;
+    navigateToPath(rootHandle, pathFromUrl).then((handle) => {
+      if (!cancelled) {
+        setCurrentHandle(handle);
+        setError(null);
+      }
+    }).catch((err) => {
+      if (!cancelled) {
+        console.error("Failed to navigate to path:", err);
+        setError(`Failed to navigate to: ${pathFromUrl.join("/")}`);
+        setCurrentHandle(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [rootHandle, pathFromUrl]);
+  return {
+    rootHandle,
+    currentHandle,
+    isRestoring,
+    error
+  };
+}
+
+// src/pages/GalleryPage.tsx
+var import_jsx_runtime9 = __toESM(require_jsx_runtime());
+var TAB_STORAGE_KEY2 = "concepts-active-tab";
+var GALLERY_PATH_STORAGE_KEY = "concepts-gallery-path";
+function GalleryPage() {
+  const params = useParams();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = (0, import_react10.useState)(() => {
+    const saved = localStorage.getItem(TAB_STORAGE_KEY2);
+    return saved || "directory";
+  });
+  (0, import_react10.useEffect)(() => {
+    localStorage.setItem(TAB_STORAGE_KEY2, activeTab);
+  }, [activeTab]);
+  const pathParam = params["*"] || "";
+  const currentPath = (0, import_react10.useMemo)(
+    () => pathParam ? pathParam.split("/").map(decodeURIComponent).filter(Boolean) : [],
+    [pathParam]
+  );
+  (0, import_react10.useEffect)(() => {
+    if (currentPath.length > 0) {
+      localStorage.setItem(GALLERY_PATH_STORAGE_KEY, JSON.stringify(currentPath));
+    }
+  }, [currentPath]);
+  (0, import_react10.useEffect)(() => {
+    if (pathParam === "") {
+      const savedPath = localStorage.getItem(GALLERY_PATH_STORAGE_KEY);
+      if (savedPath) {
+        try {
+          const parsedPath = JSON.parse(savedPath);
+          if (parsedPath.length > 0) {
+            const encodedPath = parsedPath.map(encodeURIComponent).join("/");
+            navigate(`/gallery/${encodedPath}`, { replace: true });
+          }
+        } catch (error2) {
+          console.error("Failed to parse saved gallery path:", error2);
+        }
+      }
+    }
+  }, []);
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "single") {
+      navigate("/");
+    }
+  };
+  const { rootHandle, currentHandle, isRestoring, error } = useGalleryState(currentPath);
+  const handleNavigateTo = async (path) => {
+    const encodedPath = path.map(encodeURIComponent).join("/");
+    navigate(`/gallery/${encodedPath}`);
+  };
+  const handleNavigateInto = async (dirName) => {
+    const newPath = [...currentPath, dirName];
+    await handleNavigateTo(newPath);
+  };
+  const handleNavigateUp = async () => {
+    if (currentPath.length > 0) {
+      const newPath = currentPath.slice(0, -1);
+      await handleNavigateTo(newPath);
+    }
+  };
+  const handleSelectDifferentDirectory = async () => {
+    await clearDirectoryState();
+    navigate("/");
+  };
+  if (isRestoring) {
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Restoring session..." })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { textAlign: "center", padding: "4rem 2rem" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "spinner", style: { margin: "0 auto 1rem" } }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Loading directory..." })
+      ] })
+    ] });
+  }
+  if (!rootHandle) {
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "No directory selected" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "status error", style: { margin: "2rem" }, children: "No directory selected. Please go back and select a directory." }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { textAlign: "center", marginTop: "1rem" }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "button", onClick: () => navigate("/"), children: "Back to Home" }) })
+    ] });
+  }
+  if (error || !currentHandle) {
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Error loading directory" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "status error", style: { margin: "2rem" }, children: error || "Failed to load directory" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { textAlign: "center", marginTop: "1rem" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "button", onClick: () => navigate("/gallery"), children: "Go to Root" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          "button",
+          {
+            className: "button secondary",
+            style: { marginLeft: "1rem" },
+            onClick: handleSelectDifferentDirectory,
+            children: "Select Different Directory"
+          }
+        )
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "View iOS Concepts app drawings in your browser" })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "tabs", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "button",
+        {
+          className: `tab ${activeTab === "single" ? "active" : ""}`,
+          onClick: () => handleTabChange("single"),
+          children: "Single File"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        "button",
+        {
+          className: `tab ${activeTab === "directory" ? "active" : ""}`,
+          onClick: () => handleTabChange("directory"),
+          children: "Browse Directory"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tab-content", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      DirectoryBrowser,
+      {
+        currentHandle,
+        currentPath,
+        onNavigateTo: handleNavigateTo,
+        onNavigateInto: handleNavigateInto,
+        onNavigateUp: handleNavigateUp,
+        onSelectDifferentDirectory: handleSelectDifferentDirectory
+      }
+    ) })
+  ] });
+}
+
 // src/App.tsx
-var import_jsx_runtime6 = __toESM(require_jsx_runtime());
+var import_jsx_runtime10 = __toESM(require_jsx_runtime());
 function App() {
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(Routes, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Home, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Route, { path: "/viewer", element: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ViewerPage, {}) })
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Routes, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Home, {}) }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/gallery/*", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(GalleryPage, {}) }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/viewer", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(ViewerPage, {}) })
   ] }) });
 }
 
 // src/main.tsx
-var import_jsx_runtime7 = __toESM(require_jsx_runtime());
+var import_jsx_runtime11 = __toESM(require_jsx_runtime());
 console.log(
   "%c\u{1F3A8} Concepts File Viewer",
   "font-size: 16px; font-weight: bold; color: #667eea;"
@@ -45643,7 +46378,7 @@ var root = document.getElementById("root");
 if (!root) {
   throw new Error("Root element not found");
 }
-(0, import_client.createRoot)(root).render(/* @__PURE__ */ (0, import_jsx_runtime7.jsx)(App, {}));
+(0, import_client.createRoot)(root).render(/* @__PURE__ */ (0, import_jsx_runtime11.jsx)(App, {}));
 /*! Bundled license information:
 
 ieee754/index.js:
