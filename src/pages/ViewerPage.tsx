@@ -31,6 +31,17 @@ export function ViewerPage() {
     } else {
       // Save data to localStorage when it's provided via navigation
       localStorage.setItem('conceptsDrawingData', JSON.stringify(data));
+
+      // Also save navigation state (fromGallery and galleryPath)
+      const fromGallery = location.state?.fromGallery;
+      const galleryPath = location.state?.galleryPath;
+
+      if (fromGallery && galleryPath) {
+        localStorage.setItem('conceptsNavigationState', JSON.stringify({
+          fromGallery,
+          galleryPath,
+        }));
+      }
     }
 
     if (!data) {
@@ -57,7 +68,35 @@ export function ViewerPage() {
   }, [location.state, navigate, render]);
 
   const handleBack = () => {
-    navigate('/');
+    // Try to get navigation state from location.state first
+    let fromGallery = location.state?.fromGallery;
+    let galleryPath = location.state?.galleryPath as string[] | undefined;
+
+    // If not in location.state, try to restore from localStorage
+    if (!fromGallery || !galleryPath) {
+      const savedNavState = localStorage.getItem('conceptsNavigationState');
+      if (savedNavState) {
+        try {
+          const parsed = JSON.parse(savedNavState);
+          fromGallery = parsed.fromGallery;
+          galleryPath = parsed.galleryPath;
+        } catch (error) {
+          console.error('Failed to parse saved navigation state:', error);
+        }
+      }
+    }
+
+    if (fromGallery && galleryPath) {
+      // Navigate back to gallery with the path in URL
+      const encodedPath = galleryPath.map(encodeURIComponent).join('/');
+      // Clear navigation state from localStorage since we're navigating away
+      localStorage.removeItem('conceptsNavigationState');
+      navigate(`/gallery/${encodedPath}`);
+    } else {
+      // Navigate to home
+      localStorage.removeItem('conceptsNavigationState');
+      navigate('/');
+    }
   };
 
   const hideToast = () => {
