@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileUploader } from '../components/FileUploader.js';
 import { DirectorySelector } from '../components/DirectorySelector.js';
+import { restoreDirectoryHandle } from '../utils/handleStorage.js';
 
 type Tab = 'single' | 'directory';
 
 const TAB_STORAGE_KEY = 'concepts-active-tab';
+const GALLERY_PATH_STORAGE_KEY = 'concepts-gallery-path';
 
 export function Home() {
+  const navigate = useNavigate();
+
   // Initialize tab from localStorage or default to 'single'
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const saved = localStorage.getItem(TAB_STORAGE_KEY);
@@ -18,6 +23,21 @@ export function Home() {
     localStorage.setItem(TAB_STORAGE_KEY, activeTab);
   }, [activeTab]);
 
+  // Handle tab change - navigate to gallery if directory was already selected
+  const handleTabChange = async (tab: Tab) => {
+    setActiveTab(tab);
+
+    if (tab === 'directory') {
+      // Check if a directory was already selected
+      const rootHandle = await restoreDirectoryHandle();
+      if (rootHandle) {
+        // Navigate to gallery, which will restore the saved path
+        navigate('/gallery');
+      }
+      // If no directory selected, stay on Home and show DirectorySelector
+    }
+  };
+
   return (
     <div className="container">
       <header>
@@ -28,13 +48,13 @@ export function Home() {
       <div className="tabs">
         <button
           className={`tab ${activeTab === 'single' ? 'active' : ''}`}
-          onClick={() => setActiveTab('single')}
+          onClick={() => handleTabChange('single')}
         >
           Single File
         </button>
         <button
           className={`tab ${activeTab === 'directory' ? 'active' : ''}`}
-          onClick={() => setActiveTab('directory')}
+          onClick={() => handleTabChange('directory')}
         >
           Browse Directory
         </button>

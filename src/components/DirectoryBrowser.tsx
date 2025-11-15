@@ -17,6 +17,7 @@ interface DirectoryBrowserProps {
   onNavigateTo: (path: string[]) => Promise<void>;
   onNavigateInto: (dirName: string) => Promise<void>;
   onNavigateUp: () => Promise<void>;
+  onSelectDifferentDirectory: () => Promise<void>;
 }
 
 export function DirectoryBrowser({
@@ -25,6 +26,7 @@ export function DirectoryBrowser({
   onNavigateTo,
   onNavigateInto,
   onNavigateUp,
+  onSelectDifferentDirectory,
 }: DirectoryBrowserProps) {
   const navigate = useNavigate();
   const { processFile } = useFileHandler();
@@ -144,37 +146,47 @@ export function DirectoryBrowser({
 
   return (
     <div className="gallery-container">
-      <div className="breadcrumb">
-        {currentPath.length > 0 && (
-          <button className="back-button" onClick={handleBack}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Back
-          </button>
-        )}
+      <div className="breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+          {currentPath.length > 0 && (
+            <button className="back-button" onClick={handleBack}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              Back
+            </button>
+          )}
 
-        {breadcrumbs.map((crumb, index) => (
-          <div key={crumb.path.join('/')} className="breadcrumb-item">
-            {index > 0 && <span className="breadcrumb-separator">/</span>}
-            {index === breadcrumbs.length - 1 ? (
-              <span className="breadcrumb-current">{crumb.name}</span>
-            ) : (
-              <a
-                className="breadcrumb-link"
-                onClick={() => handleBreadcrumbClick(crumb.path)}
-              >
-                {crumb.name}
-              </a>
-            )}
-          </div>
-        ))}
+          {breadcrumbs.map((crumb, index) => (
+            <div key={crumb.path.join('/')} className="breadcrumb-item">
+              {index > 0 && <span className="breadcrumb-separator">/</span>}
+              {index === breadcrumbs.length - 1 ? (
+                <span className="breadcrumb-current">{crumb.name}</span>
+              ) : (
+                <a
+                  className="breadcrumb-link"
+                  onClick={() => handleBreadcrumbClick(crumb.path)}
+                >
+                  {crumb.name}
+                </a>
+              )}
+            </div>
+          ))}
 
-        {isLoadingThumbnails && (
-          <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: '#667eea' }}>
-            Loading thumbnails...
-          </div>
-        )}
+          {isLoadingThumbnails && (
+            <div style={{ fontSize: '0.85rem', color: '#667eea' }}>
+              Loading thumbnails...
+            </div>
+          )}
+        </div>
+
+        <button
+          className="button secondary"
+          style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+          onClick={onSelectDifferentDirectory}
+        >
+          Select Different Directory
+        </button>
       </div>
 
       <div className="gallery-content">
