@@ -1,3 +1,5 @@
+// Core drawing types used by both parsers and renderers
+
 // Represents a 2D point (x, y) with optional pressure
 export interface Point {
   x: number;
@@ -42,24 +44,6 @@ export interface ImportedImage {
   pageNumber?: number; // For PDFs: which page to render (0-indexed)
 }
 
-// Plist object with UID reference
-export interface PlistUID {
-  data: number;
-}
-
-// Generic plist object
-export interface PlistObject {
-  [key: string]: any;
-}
-
-// Root structure of Concepts plist
-export interface ConceptsPlist {
-  $objects: PlistObject[];
-  $top: {
-    root: PlistUID;
-  };
-}
-
 // Parsed drawing data
 export interface DrawingData {
   strokes: Stroke[];
@@ -69,16 +53,3 @@ export interface DrawingData {
     height?: number;
   };
 }
-
-// All plist files from a .concept file
-export interface ConceptPlists {
-  strokes: any;
-  drawing: any;
-  resources: any;
-  metadata: any;
-}
-
-// Legacy types - kept for reference but no longer used
-// These were used with webkitdirectory before File System Access API
-// export interface ConceptFileInfo { ... }
-// export interface DirectoryNode { ... }

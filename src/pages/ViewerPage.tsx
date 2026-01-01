@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStrokeRenderer } from '../hooks/useStrokeRenderer.js';
 import { ZoomControls } from '../components/ZoomControls.js';
 import { Toast } from '../components/Toast.js';
-import type { DrawingData } from '../types.js';
+import type { DrawingData } from '../types/index.js';
 
 export function ViewerPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { canvasRef, render, zoomIn, zoomOut, resetView, rotateClockwise, rotateCounterClockwise } = useStrokeRenderer();
-  const [currentData, setCurrentData] = useState<DrawingData | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; show: boolean }>({
     message: '',
     type: 'success',
@@ -57,9 +56,6 @@ export function ViewerPage() {
       return;
     }
 
-    // Store data for export
-    setCurrentData(data);
-
     // Show success toast
     setToast({
       message: `Loaded ${data.strokes.length} strokes and ${data.images.length} images`,
@@ -70,37 +66,6 @@ export function ViewerPage() {
     // Render the drawing
     render(data);
   }, [location.state, navigate, render]);
-
-  const handleExportJson = useCallback(() => {
-    if (!currentData) return;
-
-    // Create a version of data without large base64 image data for readability
-    const exportData = {
-      ...currentData,
-      images: currentData.images.map(img => ({
-        ...img,
-        imageData: img.imageData ? `[base64 data, ${img.imageData.length} chars]` : undefined,
-      })),
-    };
-
-    const json = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'drawing-data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    setToast({
-      message: 'Exported JSON data for debugging',
-      type: 'success',
-      show: true,
-    });
-  }, [currentData]);
 
   const handleBack = () => {
     // Try to get navigation state from location.state first
@@ -148,7 +113,6 @@ export function ViewerPage() {
         onBack={handleBack}
         onRotateClockwise={rotateClockwise}
         onRotateCounterClockwise={rotateCounterClockwise}
-        onExportJson={handleExportJson}
       />
       <Toast
         message={toast.message}

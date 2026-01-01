@@ -3,7 +3,10 @@
  * Parses tree.pack to extract stroke data in the same DrawingData format as plistParser.ts
  */
 
-import type { Stroke, Point, DrawingData, Color, Transform, ImportedImage } from './types.js';
+import type { Stroke, Point, DrawingData, Color, Transform, ImportedImage } from '../types/index.js';
+import { decodeTransformBuffer } from './shared/transformUtils.js';
+import { ensureAligned } from './shared/bufferUtils.js';
+import { DEFAULT_COLOR, DEFAULT_BRUSH_WIDTH } from './shared/defaults.js';
 
 // Enable debug logging via URL param or console
 const DEBUG = typeof window !== 'undefined' &&
@@ -18,34 +21,14 @@ function log(...args: any[]) {
 
 /**
  * Decodes a 64-byte buffer as a 4x4 matrix and extracts the 2D affine transform
+ * Uses the shared transform decoder
  */
 function decodeTransform(buffer: Uint8Array): Transform | undefined {
   if (buffer.length !== 64) {
     log('Transform buffer is not 64 bytes:', buffer.length);
     return undefined;
   }
-
-  const view = new DataView(buffer.buffer, buffer.byteOffset, 64);
-
-  const transform: Transform = {
-    a: view.getFloat32(0, true),    // [0] scale/rotate x
-    b: view.getFloat32(4, true),    // [1] skew y
-    c: view.getFloat32(16, true),   // [4] skew x
-    d: view.getFloat32(20, true),   // [5] scale/rotate y
-    tx: view.getFloat32(48, true),  // [12] translate x
-    ty: view.getFloat32(52, true),  // [13] translate y
-  };
-
-  // Check if it's an identity transform (no transformation applied)
-  const isIdentity =
-    Math.abs(transform.a - 1) < 0.0001 &&
-    Math.abs(transform.b) < 0.0001 &&
-    Math.abs(transform.c) < 0.0001 &&
-    Math.abs(transform.d - 1) < 0.0001 &&
-    Math.abs(transform.tx) < 0.0001 &&
-    Math.abs(transform.ty) < 0.0001;
-
-  return isIdentity ? undefined : transform;
+  return decodeTransformBuffer(buffer);
 }
 
 /**
@@ -54,7 +37,7 @@ function decodeTransform(buffer: Uint8Array): Transform | undefined {
 function decodeColor(buffer: Uint8Array, alphaMultiplier?: number): Color {
   if (buffer.length !== 16) {
     log('Color buffer is not 16 bytes:', buffer.length);
-    return { r: 0, g: 0, b: 0, a: 1 };
+    return { ...DEFAULT_COLOR };
   }
 
   const view = new DataView(buffer.buffer, buffer.byteOffset, 16);
@@ -81,12 +64,7 @@ function decodeStrokePoints(buffer: Uint8Array): Point[] {
   const pointCount = Math.floor(buffer.length / POINT_SIZE);
   const points: Point[] = [];
 
-  // Handle alignment for DataView
-  let alignedBuffer = buffer;
-  if (buffer.byteOffset % 4 !== 0) {
-    alignedBuffer = new Uint8Array(buffer);
-  }
-
+  const alignedBuffer = ensureAligned(buffer);
   const view = new DataView(alignedBuffer.buffer, alignedBuffer.byteOffset, alignedBuffer.byteLength);
 
   for (let i = 0; i < pointCount; i++) {
@@ -111,41 +89,38 @@ function decodeStrokePoints(buffer: Uint8Array): Point[] {
  * - brushData[7].data = transform (64-byte Ext type 7)
  */
 function extractBrushProperties(brushData: any): { color: Color; width: number; transform?: Transform } {
-  const defaultColor: Color = { r: 0, g: 0, b: 0, a: 1 };
-  const defaultWidth = 2.0;
-
   try {
     if (!Array.isArray(brushData)) {
-      return { color: defaultColor, width: defaultWidth };
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
     }
 
     // Navigate to color: brushData[1][1][1] contains [0, [0, brushType], colorExt, alpha]
     const level1 = brushData[1];
     if (!Array.isArray(level1)) {
-      return { color: defaultColor, width: defaultWidth };
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
     }
 
     const level2 = level1[1];
     if (!Array.isArray(level2)) {
-      return { color: defaultColor, width: defaultWidth };
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
     }
 
     const level3 = level2[1];
     if (!Array.isArray(level3)) {
-      return { color: defaultColor, width: defaultWidth };
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
     }
 
     // Extract color buffer (Ext type 4, 16 bytes)
     const colorExt = level3[2];
     const alpha = typeof level3[3] === 'number' ? level3[3] : 1;
 
-    let color = defaultColor;
+    let color: Color = { ...DEFAULT_COLOR };
     if (colorExt && colorExt.data instanceof Uint8Array && colorExt.data.length === 16) {
       color = decodeColor(colorExt.data, alpha);
     }
 
     // Brush width from level2[3]
-    const brushWidth = typeof level2[3] === 'number' ? level2[3] : defaultWidth;
+    const brushWidth = typeof level2[3] === 'number' ? level2[3] : DEFAULT_BRUSH_WIDTH;
 
     // Extract transform from brushData[7] (Ext type 7, 64 bytes)
     let transform: Transform | undefined;
@@ -159,7 +134,7 @@ function extractBrushProperties(brushData: any): { color: Color; width: number; 
     return { color, width: brushWidth, transform };
   } catch (e) {
     log('Error extracting brush properties:', e);
-    return { color: defaultColor, width: defaultWidth };
+    return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
   }
 }
 
@@ -195,7 +170,7 @@ function processStrokeItem(item: any): Stroke | null {
     const { color, transform } = extractBrushProperties(brushInfo);
 
     // Get the display width from strokeData[3] (this is the actual stroke width used for rendering)
-    const displayWidth = typeof strokeData[3] === 'number' ? strokeData[3] : 2.0;
+    const displayWidth = typeof strokeData[3] === 'number' ? strokeData[3] : DEFAULT_BRUSH_WIDTH;
 
     // Extract points from strokeData[17] (the stroke points Uint8Array)
     const pointsBuffer = strokeData[17];
@@ -335,8 +310,8 @@ export function messagePackToJson(data: any): any {
 
   if (data && typeof data === 'object' && data.type !== undefined && data.data instanceof Uint8Array) {
     // Handle msgpack ext type objects
-    const hex = Array.from(data.data.slice(0, 100))
-      .map((b: number) => b.toString(16).padStart(2, '0'))
+    const hex = Array.from<number>(data.data.slice(0, 100))
+      .map(b => b.toString(16).padStart(2, '0'))
       .join(' ');
     return `<Ext(type=${data.type}, ${data.data.length})> ${hex}${data.data.length > 100 ? '...' : ''}`;
   }

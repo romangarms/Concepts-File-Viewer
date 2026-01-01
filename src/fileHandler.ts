@@ -1,8 +1,8 @@
 import JSZip from 'jszip';
 import { decode } from '@msgpack/msgpack';
-import { parseConceptsStrokes } from './plistParser.js';
-import { parseConceptsStrokesFromMessagePack, messagePackToJson } from './messagePackParser.js';
-import type { DrawingData, ConceptPlists } from './types.js';
+import { parseConceptsStrokes } from './parsers/plistParser.js';
+import { parseConceptsStrokesFromMessagePack, messagePackToJson } from './parsers/messagePackParser.js';
+import type { DrawingData, ConceptPlists } from './types/index.js';
 
 // Use require to get mutable reference to bplist-parser
 const bplistParser = require('bplist-parser');

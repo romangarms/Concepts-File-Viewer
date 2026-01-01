@@ -1,4 +1,4 @@
-import type { FileHandleInfo, DirectoryHandleInfo } from '../utils/lazyDirectoryScanner';
+import type { FileHandleInfo, DirectoryHandleInfo } from '../types/gallery.js';
 
 interface ThumbnailGridProps {
   files: FileHandleInfo[];

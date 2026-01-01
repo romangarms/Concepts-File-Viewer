@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFileHandler } from '../hooks/useFileHandler.js';
-import type { DrawingData } from '../types.js';
+import type { DrawingData } from '../types/index.js';
 
 export function FileUploader() {
   const navigate = useNavigate();

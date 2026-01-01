@@ -6,10 +6,8 @@ import {
   scanDirectoryLazy,
   loadThumbnails,
   getPathBreadcrumbs,
-  type FileHandleInfo,
-  type DirectoryHandleInfo,
-  type DirectoryContents,
 } from '../utils/lazyDirectoryScanner';
+import type { FileHandleInfo, DirectoryHandleInfo, DirectoryContents } from '../types/gallery.js';
 
 interface DirectoryBrowserProps {
   currentHandle: FileSystemDirectoryHandle;
@@ -174,7 +172,7 @@ export function DirectoryBrowser({
           ))}
 
           {isLoadingThumbnails && (
-            <div style={{ fontSize: '0.85rem', color: '#667eea' }}>
+            <div style={{ fontSize: '0.85rem', color: '#FF9500' }}>
               Loading thumbnails...
             </div>
           )}

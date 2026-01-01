@@ -4,7 +4,7 @@ import { App } from './App.js';
 // Print startup message
 console.log(
   '%c🎨 Concepts File Viewer',
-  'font-size: 16px; font-weight: bold; color: #667eea;'
+  'font-size: 16px; font-weight: bold; color: #FF9500;'
 );
 
 // Render the app

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FileHandler } from '../fileHandler.js';
-import type { DrawingData } from '../types.js';
+import type { DrawingData } from '../types/index.js';
 
 const fileHandler = new FileHandler();
 
