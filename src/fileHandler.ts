@@ -1,9 +1,14 @@
 import JSZip from 'jszip';
+import { decode } from '@msgpack/msgpack';
 import { parseConceptsStrokes } from './plistParser.js';
+import { parseConceptsStrokesFromMessagePack, messagePackToJson } from './messagePackParser.js';
 import type { DrawingData, ConceptPlists } from './types.js';
 
 // Use require to get mutable reference to bplist-parser
 const bplistParser = require('bplist-parser');
+
+// File format types
+type FileFormat = 'plist' | 'messagepack';
 
 // Increase maxObjectCount to handle large documents (default is 32768)
 bplistParser.maxObjectCount = 1000000;
@@ -13,20 +18,55 @@ bplistParser.maxObjectCount = 1000000;
  */
 export class FileHandler {
   /**
-   * Process a .concept file and extract drawing data
+   * Detect file format based on ZIP contents
+   */
+  private detectFormat(zip: JSZip): FileFormat {
+    // Check for MessagePack format (.concepts files with .pack files)
+    if (zip.file('tree.pack')) {
+      return 'messagepack';
+    }
+    // Default to plist format (.concept files with .plist files)
+    return 'plist';
+  }
+
+  /**
+   * Process a .concept or .concepts file and extract drawing data
    */
   async processConceptFile(file: File): Promise<DrawingData> {
+    const lowerName = file.name.toLowerCase();
+
     // Validate file extension
-    if (!file.name.toLowerCase().endsWith('.concept')) {
-      throw new Error('Please select a .concept file');
+    if (!lowerName.endsWith('.concept') && !lowerName.endsWith('.concepts')) {
+      throw new Error('Please select a .concept or .concepts file');
     }
 
     // Read file as array buffer
     const arrayBuffer = await file.arrayBuffer();
 
-    // Unzip the .concept file
+    // Unzip the file
     const zip = await JSZip.loadAsync(arrayBuffer);
 
+    // Detect format and route to appropriate parser
+    const format = this.detectFormat(zip);
+
+    let drawingData: DrawingData;
+
+    if (format === 'messagepack') {
+      drawingData = await this.processMessagePackFormat(zip);
+    } else {
+      drawingData = await this.processPlistFormat(zip);
+    }
+
+    // Extract images and PDFs from ImportedImages folder (same for both formats)
+    await this.loadImportedImages(zip, drawingData);
+
+    return drawingData;
+  }
+
+  /**
+   * Process plist format (.concept files from iPad)
+   */
+  private async processPlistFormat(zip: JSZip): Promise<DrawingData> {
     // Extract Strokes.plist
     const strokesFile = zip.file('Strokes.plist');
     if (!strokesFile) {
@@ -44,34 +84,57 @@ export class FileHandler {
     }
 
     const plistData = parsed[0];
-    const drawingData = parseConceptsStrokes(plistData);
+    return parseConceptsStrokes(plistData);
+  }
 
-    // Extract images and PDFs from ImportedImages folder
-    const importedImagesFolder = zip.folder('ImportedImages');
-    if (importedImagesFolder) {
-      const imagePromises = drawingData.images.map(async (image) => {
-        // Try common image extensions and PDF
-        const extensions = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'pdf'];
-        for (const ext of extensions) {
-          const imageFile = zip.file(`ImportedImages/${image.uuid}.${ext}`);
-          if (imageFile) {
-            const imageBuffer = await imageFile.async('uint8array');
-            // Convert to base64 data URL
-            const base64 = btoa(
-              Array.from(imageBuffer)
-                .map((byte) => String.fromCharCode(byte))
-                .join('')
-            );
-            const mimeType = ext === 'pdf' ? 'application/pdf' : `image/${ext}`;
-            image.imageData = `data:${mimeType};base64,${base64}`;
-            break;
-          }
-        }
-      });
-      await Promise.all(imagePromises);
+  /**
+   * Process MessagePack format (.concepts files from Android/Windows)
+   */
+  private async processMessagePackFormat(zip: JSZip): Promise<DrawingData> {
+    // Extract tree.pack (contains stroke data)
+    const treeFile = zip.file('tree.pack');
+    if (!treeFile) {
+      throw new Error('tree.pack not found in .concepts file');
     }
 
-    return drawingData;
+    // Get the MessagePack data as Uint8Array
+    const treeBuffer = await treeFile.async('uint8array');
+
+    // Decode MessagePack
+    const decoded = decode(treeBuffer);
+
+    return parseConceptsStrokesFromMessagePack(decoded);
+  }
+
+  /**
+   * Load images and PDFs from ImportedImages folder
+   */
+  private async loadImportedImages(zip: JSZip, drawingData: DrawingData): Promise<void> {
+    const importedImagesFolder = zip.folder('ImportedImages');
+    if (!importedImagesFolder) {
+      return;
+    }
+
+    const imagePromises = drawingData.images.map(async (image) => {
+      // Try common image extensions and PDF
+      const extensions = ['jpeg', 'jpg', 'png', 'gif', 'webp', 'pdf'];
+      for (const ext of extensions) {
+        const imageFile = zip.file(`ImportedImages/${image.uuid}.${ext}`);
+        if (imageFile) {
+          const imageBuffer = await imageFile.async('uint8array');
+          // Convert to base64 data URL
+          const base64 = btoa(
+            Array.from(imageBuffer)
+              .map((byte) => String.fromCharCode(byte))
+              .join('')
+          );
+          const mimeType = ext === 'pdf' ? 'application/pdf' : `image/${ext}`;
+          image.imageData = `data:${mimeType};base64,${base64}`;
+          break;
+        }
+      }
+    });
+    await Promise.all(imagePromises);
   }
 
   /**

@@ -5,9 +5,10 @@ interface ZoomControlsProps {
   onBack: () => void;
   onRotateClockwise: () => void;
   onRotateCounterClockwise: () => void;
+  onExportJson?: () => void;
 }
 
-export function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack, onRotateClockwise, onRotateCounterClockwise }: Readonly<ZoomControlsProps>) {
+export function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack, onRotateClockwise, onRotateCounterClockwise, onExportJson }: Readonly<ZoomControlsProps>) {
   return (
     <div className="zoom-controls">
       <button onClick={onZoomIn} className="zoom-button" title="Zoom In">
@@ -25,6 +26,11 @@ export function ZoomControls({ onZoomIn, onZoomOut, onReset, onBack, onRotateClo
       <button onClick={onReset} className="zoom-button" title="Reset View">
         ⌖
       </button>
+      {onExportJson && (
+        <button onClick={onExportJson} className="zoom-button" title="Export JSON (Debug)">
+          {}
+        </button>
+      )}
       <button onClick={onBack} className="zoom-button" title="Back to File Selector">
         ←
       </button>

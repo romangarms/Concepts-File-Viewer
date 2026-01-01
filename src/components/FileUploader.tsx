@@ -41,7 +41,7 @@ export function FileUploader() {
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
-          <h2>Drop .concept file here</h2>
+          <h2>Drop .concept or .concepts file here</h2>
           <p>or</p>
           <label htmlFor="file-input" className="file-input-label">
             Choose File
@@ -50,7 +50,7 @@ export function FileUploader() {
             ref={fileInputRef}
             type="file"
             id="file-input"
-            accept=".concept"
+            accept=".concept,.concepts"
             style={{ display: 'none' }}
           />
         </div>

@@ -47,12 +47,13 @@ export async function scanDirectoryLazy(
         onProgress(count);
       }
 
-      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.concept')) {
+      const lowerName = entry.name.toLowerCase();
+      if (entry.kind === 'file' && (lowerName.endsWith('.concept') || lowerName.endsWith('.concepts'))) {
         // Get file metadata without reading contents
         const file = await entry.getFile();
 
         files.push({
-          name: entry.name.replace(/\.concept$/i, ''),
+          name: entry.name.replace(/\.concepts?$/i, ''),
           fullName: entry.name,
           fileHandle: entry,
           size: file.size,
@@ -149,7 +150,8 @@ export async function countConceptFiles(
 
   try {
     for await (const entry of dirHandle.values()) {
-      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.concept')) {
+      const lowerName = entry.name.toLowerCase();
+      if (entry.kind === 'file' && (lowerName.endsWith('.concept') || lowerName.endsWith('.concepts'))) {
         count++;
       } else if (entry.kind === 'directory') {
         // Recursively count files in subdirectories
