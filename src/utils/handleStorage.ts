@@ -74,13 +74,17 @@ export async function restoreDirectoryHandle(): Promise<FileSystemDirectoryHandl
 }
 
 /**
- * Clear stored directory handle from IndexedDB
+ * Clear stored directory handle from IndexedDB and gallery path from localStorage
  */
 export async function clearDirectoryState(): Promise<void> {
+  // Clear localStorage path first (synchronous, always works)
+  localStorage.removeItem('concepts-gallery-path');
+
+  // Then try to clear IndexedDB handle
   try {
     await del(ROOT_HANDLE_KEY);
   } catch (error) {
-    console.error('Failed to clear directory state:', error);
+    console.error('Failed to clear directory handle:', error);
   }
 }
 

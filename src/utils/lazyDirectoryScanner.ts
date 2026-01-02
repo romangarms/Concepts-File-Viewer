@@ -148,9 +148,9 @@ export async function countConceptFiles(
 /**
  * Get breadcrumb path components for navigation
  */
-export function getPathBreadcrumbs(path: string[]): Array<{ name: string; path: string[] }> {
+export function getPathBreadcrumbs(path: string[], rootName?: string): Array<{ name: string; path: string[] }> {
   const breadcrumbs: Array<{ name: string; path: string[] }> = [
-    { name: 'Root', path: [] },
+    { name: rootName || 'Root', path: [] },
   ];
 
   for (let i = 0; i < path.length; i++) {

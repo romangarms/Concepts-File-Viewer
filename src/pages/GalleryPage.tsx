@@ -1,8 +1,8 @@
 import { useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { DirectoryBrowser } from '../components/DirectoryBrowser';
 import { useGalleryState } from '../hooks/useGalleryState';
-import { clearDirectoryState } from '../utils/handleStorage';
+import { clearDirectoryState, saveDirectoryHandle } from '../utils/handleStorage';
 
 const GALLERY_PATH_STORAGE_KEY = 'concepts-gallery-path';
 
@@ -39,6 +39,7 @@ export function GalleryPage() {
           }
         } catch (error) {
           console.error('Failed to parse saved gallery path:', error);
+          localStorage.removeItem(GALLERY_PATH_STORAGE_KEY);
         }
       }
     }
@@ -64,15 +65,27 @@ export function GalleryPage() {
   };
 
   const handleSelectDifferentDirectory = async () => {
-    await clearDirectoryState();
-    navigate('/');
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+      await clearDirectoryState();
+      await saveDirectoryHandle(dirHandle);
+      // Navigate to gallery root with new directory
+      navigate('/gallery', { replace: true });
+      // Force a page reload to reset state with new directory
+      window.location.reload();
+    } catch (err) {
+      // User cancelled the picker - do nothing, stay on current view
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to select directory:', err);
+      }
+    }
   };
 
   if (isRestoring) {
     return (
       <div className="container">
         <header>
-          <img src="favicon.png" alt="Logo" className="header-logo" />
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
           <div className="header-text">
             <h1>Concepts File Viewer</h1>
             <p>Restoring session...</p>
@@ -90,7 +103,7 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
-          <img src="favicon.png" alt="Logo" className="header-logo" />
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
           <div className="header-text">
             <h1>Concepts File Viewer</h1>
             <p>No directory selected</p>
@@ -112,7 +125,7 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
-          <img src="favicon.png" alt="Logo" className="header-logo" />
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
           <div className="header-text">
             <h1>Concepts File Viewer</h1>
             <p>Error loading directory</p>
@@ -140,7 +153,7 @@ export function GalleryPage() {
   return (
     <div className="container">
       <header>
-        <img src="favicon.png" alt="Logo" className="header-logo" />
+        <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
         <div className="header-text">
           <h1>Concepts File Viewer</h1>
           <p>View Concepts app drawings in your browser</p>
@@ -161,6 +174,7 @@ export function GalleryPage() {
         <DirectoryBrowser
           currentHandle={currentHandle}
           currentPath={currentPath}
+          rootFolderName={rootHandle.name}
           onNavigateTo={handleNavigateTo}
           onNavigateInto={handleNavigateInto}
           onNavigateUp={handleNavigateUp}

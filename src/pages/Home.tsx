@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { FileUploader } from '../components/FileUploader.js';
 import {
   isFileSystemAccessSupported,
@@ -30,6 +30,8 @@ export function Home() {
     try {
       const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
       await saveDirectoryHandle(dirHandle);
+      // Clear any saved path from previous directory
+      localStorage.removeItem('concepts-gallery-path');
       navigate('/gallery');
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -41,7 +43,7 @@ export function Home() {
   return (
     <div className="container">
       <header>
-        <img src="favicon.png" alt="Logo" className="header-logo" />
+        <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
         <div className="header-text">
           <h1>Concepts File Viewer</h1>
           <p>View Concepts app drawings in your browser</p>
@@ -91,7 +93,7 @@ export function Home() {
                 <li>
                   <strong>Windows:</strong> Install <a href="https://support.apple.com/en-us/HT204283" target="_blank" rel="noopener noreferrer">iCloud for Windows</a>
                 </li>
-                <li>Navigate to: <code>iCloud Drive/Concepts/drawings/</code></li>
+                <li>Click "Select Folder" and navigate to: <code>iCloud Drive/Concepts/drawings/</code></li>
               </ol>
             </div>
           </div>
