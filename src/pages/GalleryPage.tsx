@@ -95,6 +95,7 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
+          <img src="favicon.png" alt="Logo" className="header-logo" />
           <h1>Concepts Gallery</h1>
           <p>Restoring session...</p>
         </header>
@@ -110,6 +111,7 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
+          <img src="favicon.png" alt="Logo" className="header-logo" />
           <h1>Concepts Gallery</h1>
           <p>No directory selected</p>
         </header>
@@ -129,6 +131,7 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
+          <img src="favicon.png" alt="Logo" className="header-logo" />
           <h1>Concepts Gallery</h1>
           <p>Error loading directory</p>
         </header>
@@ -154,6 +157,7 @@ export function GalleryPage() {
   return (
     <div className="container">
       <header>
+        <img src="favicon.png" alt="Logo" className="header-logo" />
         <h1>Concepts File Viewer</h1>
         <p>View iOS Concepts app drawings in your browser</p>
       </header>

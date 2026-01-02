@@ -44,6 +44,12 @@ header {
   color: white;
 }
 
+header .header-logo {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.5rem;
+}
+
 header h1 {
   font-size: 2rem;
   margin-bottom: 0.5rem;

@@ -41,6 +41,7 @@ export function Home() {
   return (
     <div className="container">
       <header>
+        <img src="favicon.png" alt="Logo" className="header-logo" />
         <h1>Concepts File Viewer</h1>
         <p>View iOS Concepts app drawings in your browser</p>
       </header>
