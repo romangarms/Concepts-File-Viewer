@@ -3316,11 +3316,11 @@ var require_react_dom_client_production = __commonJS({
         }
     }
     var clz32 = Math.clz32 ? Math.clz32 : clz32Fallback;
-    var log = Math.log;
+    var log2 = Math.log;
     var LN2 = Math.LN2;
     function clz32Fallback(x) {
       x >>>= 0;
-      return 0 === x ? 32 : 31 - (log(x) / LN2 | 0) | 0;
+      return 0 === x ? 32 : 31 - (log2(x) / LN2 | 0) | 0;
     }
     var nextTransitionUpdateLane = 256;
     var nextTransitionDeferredLane = 262144;
@@ -17841,6 +17841,38 @@ function DataRoutes({
 }) {
   return useRoutesImpl(routes, void 0, state, unstable_onError, future);
 }
+function Navigate({
+  to,
+  replace: replace2,
+  state,
+  relative
+}) {
+  invariant(
+    useInRouterContext(),
+    // TODO: This error is probably because they somehow have 2 versions of
+    // the router loaded. We can help them understand how to avoid that.
+    `<Navigate> may be used only in the context of a <Router> component.`
+  );
+  let { static: isStatic } = React3.useContext(NavigationContext);
+  warning(
+    !isStatic,
+    `<Navigate> must not be used on the initial render in a <StaticRouter>. This is a no-op, but you should modify your code so the <Navigate> is only ever rendered in response to some user interaction or state change.`
+  );
+  let { matches } = React3.useContext(RouteContext);
+  let { pathname: locationPathname } = useLocation();
+  let navigate = useNavigate();
+  let path = resolveTo(
+    to,
+    getResolveToMatches(matches),
+    locationPathname,
+    relative === "path"
+  );
+  let jsonPath = JSON.stringify(path);
+  React3.useEffect(() => {
+    navigate(JSON.parse(jsonPath), { replace: replace2, state, relative });
+  }, [navigate, jsonPath, relative, replace2, state]);
+  return null;
+}
 function Route(props) {
   invariant(
     false,
@@ -19053,7 +19085,7 @@ var import_react4 = __toESM(require_react());
 
 // src/components/FileUploader.tsx
 init_node_shims();
-var import_react2 = __toESM(require_react());
+var import_react3 = __toESM(require_react());
 
 // src/hooks/useFileHandler.ts
 init_node_shims();
@@ -19063,7 +19095,984 @@ var import_react = __toESM(require_react());
 init_node_shims();
 import JSZip from "jszip";
 
-// src/plistParser.ts
+// node_modules/@msgpack/msgpack/dist.esm/index.mjs
+init_node_shims();
+
+// node_modules/@msgpack/msgpack/dist.esm/utils/utf8.mjs
+init_node_shims();
+var sharedTextEncoder = new TextEncoder();
+var CHUNK_SIZE = 4096;
+function utf8DecodeJs(bytes, inputOffset, byteLength) {
+  let offset = inputOffset;
+  const end = offset + byteLength;
+  const units = [];
+  let result = "";
+  while (offset < end) {
+    const byte1 = bytes[offset++];
+    if ((byte1 & 128) === 0) {
+      units.push(byte1);
+    } else if ((byte1 & 224) === 192) {
+      const byte2 = bytes[offset++] & 63;
+      units.push((byte1 & 31) << 6 | byte2);
+    } else if ((byte1 & 240) === 224) {
+      const byte2 = bytes[offset++] & 63;
+      const byte3 = bytes[offset++] & 63;
+      units.push((byte1 & 31) << 12 | byte2 << 6 | byte3);
+    } else if ((byte1 & 248) === 240) {
+      const byte2 = bytes[offset++] & 63;
+      const byte3 = bytes[offset++] & 63;
+      const byte4 = bytes[offset++] & 63;
+      let unit = (byte1 & 7) << 18 | byte2 << 12 | byte3 << 6 | byte4;
+      if (unit > 65535) {
+        unit -= 65536;
+        units.push(unit >>> 10 & 1023 | 55296);
+        unit = 56320 | unit & 1023;
+      }
+      units.push(unit);
+    } else {
+      units.push(byte1);
+    }
+    if (units.length >= CHUNK_SIZE) {
+      result += String.fromCharCode(...units);
+      units.length = 0;
+    }
+  }
+  if (units.length > 0) {
+    result += String.fromCharCode(...units);
+  }
+  return result;
+}
+var sharedTextDecoder = new TextDecoder();
+var TEXT_DECODER_THRESHOLD = 200;
+function utf8DecodeTD(bytes, inputOffset, byteLength) {
+  const stringBytes = bytes.subarray(inputOffset, inputOffset + byteLength);
+  return sharedTextDecoder.decode(stringBytes);
+}
+function utf8Decode(bytes, inputOffset, byteLength) {
+  if (byteLength > TEXT_DECODER_THRESHOLD) {
+    return utf8DecodeTD(bytes, inputOffset, byteLength);
+  } else {
+    return utf8DecodeJs(bytes, inputOffset, byteLength);
+  }
+}
+
+// node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+init_node_shims();
+
+// node_modules/@msgpack/msgpack/dist.esm/ExtData.mjs
+init_node_shims();
+var ExtData = class {
+  type;
+  data;
+  constructor(type, data2) {
+    this.type = type;
+    this.data = data2;
+  }
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+init_node_shims();
+
+// node_modules/@msgpack/msgpack/dist.esm/DecodeError.mjs
+init_node_shims();
+var DecodeError = class _DecodeError extends Error {
+  constructor(message) {
+    super(message);
+    const proto = Object.create(_DecodeError.prototype);
+    Object.setPrototypeOf(this, proto);
+    Object.defineProperty(this, "name", {
+      configurable: true,
+      enumerable: false,
+      value: _DecodeError.name
+    });
+  }
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/utils/int.mjs
+init_node_shims();
+var UINT32_MAX = 4294967295;
+function setInt64(view, offset, value) {
+  const high = Math.floor(value / 4294967296);
+  const low = value;
+  view.setUint32(offset, high);
+  view.setUint32(offset + 4, low);
+}
+function getInt64(view, offset) {
+  const high = view.getInt32(offset);
+  const low = view.getUint32(offset + 4);
+  return high * 4294967296 + low;
+}
+function getUint64(view, offset) {
+  const high = view.getUint32(offset);
+  const low = view.getUint32(offset + 4);
+  return high * 4294967296 + low;
+}
+
+// node_modules/@msgpack/msgpack/dist.esm/timestamp.mjs
+var EXT_TIMESTAMP = -1;
+var TIMESTAMP32_MAX_SEC = 4294967296 - 1;
+var TIMESTAMP64_MAX_SEC = 17179869184 - 1;
+function encodeTimeSpecToTimestamp({ sec, nsec }) {
+  if (sec >= 0 && nsec >= 0 && sec <= TIMESTAMP64_MAX_SEC) {
+    if (nsec === 0 && sec <= TIMESTAMP32_MAX_SEC) {
+      const rv = new Uint8Array(4);
+      const view = new DataView(rv.buffer);
+      view.setUint32(0, sec);
+      return rv;
+    } else {
+      const secHigh = sec / 4294967296;
+      const secLow = sec & 4294967295;
+      const rv = new Uint8Array(8);
+      const view = new DataView(rv.buffer);
+      view.setUint32(0, nsec << 2 | secHigh & 3);
+      view.setUint32(4, secLow);
+      return rv;
+    }
+  } else {
+    const rv = new Uint8Array(12);
+    const view = new DataView(rv.buffer);
+    view.setUint32(0, nsec);
+    setInt64(view, 4, sec);
+    return rv;
+  }
+}
+function encodeDateToTimeSpec(date) {
+  const msec = date.getTime();
+  const sec = Math.floor(msec / 1e3);
+  const nsec = (msec - sec * 1e3) * 1e6;
+  const nsecInSec = Math.floor(nsec / 1e9);
+  return {
+    sec: sec + nsecInSec,
+    nsec: nsec - nsecInSec * 1e9
+  };
+}
+function encodeTimestampExtension(object) {
+  if (object instanceof Date) {
+    const timeSpec = encodeDateToTimeSpec(object);
+    return encodeTimeSpecToTimestamp(timeSpec);
+  } else {
+    return null;
+  }
+}
+function decodeTimestampToTimeSpec(data2) {
+  const view = new DataView(data2.buffer, data2.byteOffset, data2.byteLength);
+  switch (data2.byteLength) {
+    case 4: {
+      const sec = view.getUint32(0);
+      const nsec = 0;
+      return { sec, nsec };
+    }
+    case 8: {
+      const nsec30AndSecHigh2 = view.getUint32(0);
+      const secLow32 = view.getUint32(4);
+      const sec = (nsec30AndSecHigh2 & 3) * 4294967296 + secLow32;
+      const nsec = nsec30AndSecHigh2 >>> 2;
+      return { sec, nsec };
+    }
+    case 12: {
+      const sec = getInt64(view, 4);
+      const nsec = view.getUint32(0);
+      return { sec, nsec };
+    }
+    default:
+      throw new DecodeError(`Unrecognized data size for timestamp (expected 4, 8, or 12): ${data2.length}`);
+  }
+}
+function decodeTimestampExtension(data2) {
+  const timeSpec = decodeTimestampToTimeSpec(data2);
+  return new Date(timeSpec.sec * 1e3 + timeSpec.nsec / 1e6);
+}
+var timestampExtension = {
+  type: EXT_TIMESTAMP,
+  encode: encodeTimestampExtension,
+  decode: decodeTimestampExtension
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/ExtensionCodec.mjs
+var ExtensionCodec = class _ExtensionCodec {
+  static defaultCodec = new _ExtensionCodec();
+  // ensures ExtensionCodecType<X> matches ExtensionCodec<X>
+  // this will make type errors a lot more clear
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __brand;
+  // built-in extensions
+  builtInEncoders = [];
+  builtInDecoders = [];
+  // custom extensions
+  encoders = [];
+  decoders = [];
+  constructor() {
+    this.register(timestampExtension);
+  }
+  register({ type, encode, decode: decode2 }) {
+    if (type >= 0) {
+      this.encoders[type] = encode;
+      this.decoders[type] = decode2;
+    } else {
+      const index = -1 - type;
+      this.builtInEncoders[index] = encode;
+      this.builtInDecoders[index] = decode2;
+    }
+  }
+  tryToEncode(object, context) {
+    for (let i = 0; i < this.builtInEncoders.length; i++) {
+      const encodeExt = this.builtInEncoders[i];
+      if (encodeExt != null) {
+        const data2 = encodeExt(object, context);
+        if (data2 != null) {
+          const type = -1 - i;
+          return new ExtData(type, data2);
+        }
+      }
+    }
+    for (let i = 0; i < this.encoders.length; i++) {
+      const encodeExt = this.encoders[i];
+      if (encodeExt != null) {
+        const data2 = encodeExt(object, context);
+        if (data2 != null) {
+          const type = i;
+          return new ExtData(type, data2);
+        }
+      }
+    }
+    if (object instanceof ExtData) {
+      return object;
+    }
+    return null;
+  }
+  decode(data2, type, context) {
+    const decodeExt = type < 0 ? this.builtInDecoders[-1 - type] : this.decoders[type];
+    if (decodeExt) {
+      return decodeExt(data2, type, context);
+    } else {
+      return new ExtData(type, data2);
+    }
+  }
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/utils/typedArrays.mjs
+init_node_shims();
+function isArrayBufferLike(buffer) {
+  return buffer instanceof ArrayBuffer || typeof SharedArrayBuffer !== "undefined" && buffer instanceof SharedArrayBuffer;
+}
+function ensureUint8Array(buffer) {
+  if (buffer instanceof Uint8Array) {
+    return buffer;
+  } else if (ArrayBuffer.isView(buffer)) {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  } else if (isArrayBufferLike(buffer)) {
+    return new Uint8Array(buffer);
+  } else {
+    return Uint8Array.from(buffer);
+  }
+}
+
+// node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+init_node_shims();
+
+// node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+init_node_shims();
+
+// node_modules/@msgpack/msgpack/dist.esm/utils/prettyByte.mjs
+init_node_shims();
+function prettyByte(byte) {
+  return `${byte < 0 ? "-" : ""}0x${Math.abs(byte).toString(16).padStart(2, "0")}`;
+}
+
+// node_modules/@msgpack/msgpack/dist.esm/CachedKeyDecoder.mjs
+init_node_shims();
+var DEFAULT_MAX_KEY_LENGTH = 16;
+var DEFAULT_MAX_LENGTH_PER_KEY = 16;
+var CachedKeyDecoder = class {
+  hit = 0;
+  miss = 0;
+  caches;
+  maxKeyLength;
+  maxLengthPerKey;
+  constructor(maxKeyLength = DEFAULT_MAX_KEY_LENGTH, maxLengthPerKey = DEFAULT_MAX_LENGTH_PER_KEY) {
+    this.maxKeyLength = maxKeyLength;
+    this.maxLengthPerKey = maxLengthPerKey;
+    this.caches = [];
+    for (let i = 0; i < this.maxKeyLength; i++) {
+      this.caches.push([]);
+    }
+  }
+  canBeCached(byteLength) {
+    return byteLength > 0 && byteLength <= this.maxKeyLength;
+  }
+  find(bytes, inputOffset, byteLength) {
+    const records = this.caches[byteLength - 1];
+    FIND_CHUNK:
+      for (const record of records) {
+        const recordBytes = record.bytes;
+        for (let j = 0; j < byteLength; j++) {
+          if (recordBytes[j] !== bytes[inputOffset + j]) {
+            continue FIND_CHUNK;
+          }
+        }
+        return record.str;
+      }
+    return null;
+  }
+  store(bytes, value) {
+    const records = this.caches[bytes.length - 1];
+    const record = { bytes, str: value };
+    if (records.length >= this.maxLengthPerKey) {
+      records[Math.random() * records.length | 0] = record;
+    } else {
+      records.push(record);
+    }
+  }
+  decode(bytes, inputOffset, byteLength) {
+    const cachedValue = this.find(bytes, inputOffset, byteLength);
+    if (cachedValue != null) {
+      this.hit++;
+      return cachedValue;
+    }
+    this.miss++;
+    const str = utf8DecodeJs(bytes, inputOffset, byteLength);
+    const slicedCopyOfBytes = Uint8Array.prototype.slice.call(bytes, inputOffset, inputOffset + byteLength);
+    this.store(slicedCopyOfBytes, str);
+    return str;
+  }
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/Decoder.mjs
+var STATE_ARRAY = "array";
+var STATE_MAP_KEY = "map_key";
+var STATE_MAP_VALUE = "map_value";
+var mapKeyConverter = (key) => {
+  if (typeof key === "string" || typeof key === "number") {
+    return key;
+  }
+  throw new DecodeError("The type of key must be string or number but " + typeof key);
+};
+var StackPool = class {
+  stack = [];
+  stackHeadPosition = -1;
+  get length() {
+    return this.stackHeadPosition + 1;
+  }
+  top() {
+    return this.stack[this.stackHeadPosition];
+  }
+  pushArrayState(size) {
+    const state = this.getUninitializedStateFromPool();
+    state.type = STATE_ARRAY;
+    state.position = 0;
+    state.size = size;
+    state.array = new Array(size);
+  }
+  pushMapState(size) {
+    const state = this.getUninitializedStateFromPool();
+    state.type = STATE_MAP_KEY;
+    state.readCount = 0;
+    state.size = size;
+    state.map = {};
+  }
+  getUninitializedStateFromPool() {
+    this.stackHeadPosition++;
+    if (this.stackHeadPosition === this.stack.length) {
+      const partialState = {
+        type: void 0,
+        size: 0,
+        array: void 0,
+        position: 0,
+        readCount: 0,
+        map: void 0,
+        key: null
+      };
+      this.stack.push(partialState);
+    }
+    return this.stack[this.stackHeadPosition];
+  }
+  release(state) {
+    const topStackState = this.stack[this.stackHeadPosition];
+    if (topStackState !== state) {
+      throw new Error("Invalid stack state. Released state is not on top of the stack.");
+    }
+    if (state.type === STATE_ARRAY) {
+      const partialState = state;
+      partialState.size = 0;
+      partialState.array = void 0;
+      partialState.position = 0;
+      partialState.type = void 0;
+    }
+    if (state.type === STATE_MAP_KEY || state.type === STATE_MAP_VALUE) {
+      const partialState = state;
+      partialState.size = 0;
+      partialState.map = void 0;
+      partialState.readCount = 0;
+      partialState.type = void 0;
+    }
+    this.stackHeadPosition--;
+  }
+  reset() {
+    this.stack.length = 0;
+    this.stackHeadPosition = -1;
+  }
+};
+var HEAD_BYTE_REQUIRED = -1;
+var EMPTY_VIEW = new DataView(new ArrayBuffer(0));
+var EMPTY_BYTES = new Uint8Array(EMPTY_VIEW.buffer);
+try {
+  EMPTY_VIEW.getInt8(0);
+} catch (e) {
+  if (!(e instanceof RangeError)) {
+    throw new Error("This module is not supported in the current JavaScript engine because DataView does not throw RangeError on out-of-bounds access");
+  }
+}
+var MORE_DATA = new RangeError("Insufficient data");
+var sharedCachedKeyDecoder = new CachedKeyDecoder();
+var Decoder = class _Decoder {
+  extensionCodec;
+  context;
+  useBigInt64;
+  rawStrings;
+  maxStrLength;
+  maxBinLength;
+  maxArrayLength;
+  maxMapLength;
+  maxExtLength;
+  keyDecoder;
+  mapKeyConverter;
+  totalPos = 0;
+  pos = 0;
+  view = EMPTY_VIEW;
+  bytes = EMPTY_BYTES;
+  headByte = HEAD_BYTE_REQUIRED;
+  stack = new StackPool();
+  entered = false;
+  constructor(options) {
+    this.extensionCodec = options?.extensionCodec ?? ExtensionCodec.defaultCodec;
+    this.context = options?.context;
+    this.useBigInt64 = options?.useBigInt64 ?? false;
+    this.rawStrings = options?.rawStrings ?? false;
+    this.maxStrLength = options?.maxStrLength ?? UINT32_MAX;
+    this.maxBinLength = options?.maxBinLength ?? UINT32_MAX;
+    this.maxArrayLength = options?.maxArrayLength ?? UINT32_MAX;
+    this.maxMapLength = options?.maxMapLength ?? UINT32_MAX;
+    this.maxExtLength = options?.maxExtLength ?? UINT32_MAX;
+    this.keyDecoder = options?.keyDecoder !== void 0 ? options.keyDecoder : sharedCachedKeyDecoder;
+    this.mapKeyConverter = options?.mapKeyConverter ?? mapKeyConverter;
+  }
+  clone() {
+    return new _Decoder({
+      extensionCodec: this.extensionCodec,
+      context: this.context,
+      useBigInt64: this.useBigInt64,
+      rawStrings: this.rawStrings,
+      maxStrLength: this.maxStrLength,
+      maxBinLength: this.maxBinLength,
+      maxArrayLength: this.maxArrayLength,
+      maxMapLength: this.maxMapLength,
+      maxExtLength: this.maxExtLength,
+      keyDecoder: this.keyDecoder
+    });
+  }
+  reinitializeState() {
+    this.totalPos = 0;
+    this.headByte = HEAD_BYTE_REQUIRED;
+    this.stack.reset();
+  }
+  setBuffer(buffer) {
+    const bytes = ensureUint8Array(buffer);
+    this.bytes = bytes;
+    this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    this.pos = 0;
+  }
+  appendBuffer(buffer) {
+    if (this.headByte === HEAD_BYTE_REQUIRED && !this.hasRemaining(1)) {
+      this.setBuffer(buffer);
+    } else {
+      const remainingData = this.bytes.subarray(this.pos);
+      const newData = ensureUint8Array(buffer);
+      const newBuffer = new Uint8Array(remainingData.length + newData.length);
+      newBuffer.set(remainingData);
+      newBuffer.set(newData, remainingData.length);
+      this.setBuffer(newBuffer);
+    }
+  }
+  hasRemaining(size) {
+    return this.view.byteLength - this.pos >= size;
+  }
+  createExtraByteError(posToShow) {
+    const { view, pos } = this;
+    return new RangeError(`Extra ${view.byteLength - pos} of ${view.byteLength} byte(s) found at buffer[${posToShow}]`);
+  }
+  /**
+   * @throws {@link DecodeError}
+   * @throws {@link RangeError}
+   */
+  decode(buffer) {
+    if (this.entered) {
+      const instance = this.clone();
+      return instance.decode(buffer);
+    }
+    try {
+      this.entered = true;
+      this.reinitializeState();
+      this.setBuffer(buffer);
+      const object = this.doDecodeSync();
+      if (this.hasRemaining(1)) {
+        throw this.createExtraByteError(this.pos);
+      }
+      return object;
+    } finally {
+      this.entered = false;
+    }
+  }
+  *decodeMulti(buffer) {
+    if (this.entered) {
+      const instance = this.clone();
+      yield* instance.decodeMulti(buffer);
+      return;
+    }
+    try {
+      this.entered = true;
+      this.reinitializeState();
+      this.setBuffer(buffer);
+      while (this.hasRemaining(1)) {
+        yield this.doDecodeSync();
+      }
+    } finally {
+      this.entered = false;
+    }
+  }
+  async decodeAsync(stream) {
+    if (this.entered) {
+      const instance = this.clone();
+      return instance.decodeAsync(stream);
+    }
+    try {
+      this.entered = true;
+      let decoded = false;
+      let object;
+      for await (const buffer of stream) {
+        if (decoded) {
+          this.entered = false;
+          throw this.createExtraByteError(this.totalPos);
+        }
+        this.appendBuffer(buffer);
+        try {
+          object = this.doDecodeSync();
+          decoded = true;
+        } catch (e) {
+          if (!(e instanceof RangeError)) {
+            throw e;
+          }
+        }
+        this.totalPos += this.pos;
+      }
+      if (decoded) {
+        if (this.hasRemaining(1)) {
+          throw this.createExtraByteError(this.totalPos);
+        }
+        return object;
+      }
+      const { headByte, pos, totalPos } = this;
+      throw new RangeError(`Insufficient data in parsing ${prettyByte(headByte)} at ${totalPos} (${pos} in the current buffer)`);
+    } finally {
+      this.entered = false;
+    }
+  }
+  decodeArrayStream(stream) {
+    return this.decodeMultiAsync(stream, true);
+  }
+  decodeStream(stream) {
+    return this.decodeMultiAsync(stream, false);
+  }
+  async *decodeMultiAsync(stream, isArray) {
+    if (this.entered) {
+      const instance = this.clone();
+      yield* instance.decodeMultiAsync(stream, isArray);
+      return;
+    }
+    try {
+      this.entered = true;
+      let isArrayHeaderRequired = isArray;
+      let arrayItemsLeft = -1;
+      for await (const buffer of stream) {
+        if (isArray && arrayItemsLeft === 0) {
+          throw this.createExtraByteError(this.totalPos);
+        }
+        this.appendBuffer(buffer);
+        if (isArrayHeaderRequired) {
+          arrayItemsLeft = this.readArraySize();
+          isArrayHeaderRequired = false;
+          this.complete();
+        }
+        try {
+          while (true) {
+            yield this.doDecodeSync();
+            if (--arrayItemsLeft === 0) {
+              break;
+            }
+          }
+        } catch (e) {
+          if (!(e instanceof RangeError)) {
+            throw e;
+          }
+        }
+        this.totalPos += this.pos;
+      }
+    } finally {
+      this.entered = false;
+    }
+  }
+  doDecodeSync() {
+    DECODE:
+      while (true) {
+        const headByte = this.readHeadByte();
+        let object;
+        if (headByte >= 224) {
+          object = headByte - 256;
+        } else if (headByte < 192) {
+          if (headByte < 128) {
+            object = headByte;
+          } else if (headByte < 144) {
+            const size = headByte - 128;
+            if (size !== 0) {
+              this.pushMapState(size);
+              this.complete();
+              continue DECODE;
+            } else {
+              object = {};
+            }
+          } else if (headByte < 160) {
+            const size = headByte - 144;
+            if (size !== 0) {
+              this.pushArrayState(size);
+              this.complete();
+              continue DECODE;
+            } else {
+              object = [];
+            }
+          } else {
+            const byteLength = headByte - 160;
+            object = this.decodeString(byteLength, 0);
+          }
+        } else if (headByte === 192) {
+          object = null;
+        } else if (headByte === 194) {
+          object = false;
+        } else if (headByte === 195) {
+          object = true;
+        } else if (headByte === 202) {
+          object = this.readF32();
+        } else if (headByte === 203) {
+          object = this.readF64();
+        } else if (headByte === 204) {
+          object = this.readU8();
+        } else if (headByte === 205) {
+          object = this.readU16();
+        } else if (headByte === 206) {
+          object = this.readU32();
+        } else if (headByte === 207) {
+          if (this.useBigInt64) {
+            object = this.readU64AsBigInt();
+          } else {
+            object = this.readU64();
+          }
+        } else if (headByte === 208) {
+          object = this.readI8();
+        } else if (headByte === 209) {
+          object = this.readI16();
+        } else if (headByte === 210) {
+          object = this.readI32();
+        } else if (headByte === 211) {
+          if (this.useBigInt64) {
+            object = this.readI64AsBigInt();
+          } else {
+            object = this.readI64();
+          }
+        } else if (headByte === 217) {
+          const byteLength = this.lookU8();
+          object = this.decodeString(byteLength, 1);
+        } else if (headByte === 218) {
+          const byteLength = this.lookU16();
+          object = this.decodeString(byteLength, 2);
+        } else if (headByte === 219) {
+          const byteLength = this.lookU32();
+          object = this.decodeString(byteLength, 4);
+        } else if (headByte === 220) {
+          const size = this.readU16();
+          if (size !== 0) {
+            this.pushArrayState(size);
+            this.complete();
+            continue DECODE;
+          } else {
+            object = [];
+          }
+        } else if (headByte === 221) {
+          const size = this.readU32();
+          if (size !== 0) {
+            this.pushArrayState(size);
+            this.complete();
+            continue DECODE;
+          } else {
+            object = [];
+          }
+        } else if (headByte === 222) {
+          const size = this.readU16();
+          if (size !== 0) {
+            this.pushMapState(size);
+            this.complete();
+            continue DECODE;
+          } else {
+            object = {};
+          }
+        } else if (headByte === 223) {
+          const size = this.readU32();
+          if (size !== 0) {
+            this.pushMapState(size);
+            this.complete();
+            continue DECODE;
+          } else {
+            object = {};
+          }
+        } else if (headByte === 196) {
+          const size = this.lookU8();
+          object = this.decodeBinary(size, 1);
+        } else if (headByte === 197) {
+          const size = this.lookU16();
+          object = this.decodeBinary(size, 2);
+        } else if (headByte === 198) {
+          const size = this.lookU32();
+          object = this.decodeBinary(size, 4);
+        } else if (headByte === 212) {
+          object = this.decodeExtension(1, 0);
+        } else if (headByte === 213) {
+          object = this.decodeExtension(2, 0);
+        } else if (headByte === 214) {
+          object = this.decodeExtension(4, 0);
+        } else if (headByte === 215) {
+          object = this.decodeExtension(8, 0);
+        } else if (headByte === 216) {
+          object = this.decodeExtension(16, 0);
+        } else if (headByte === 199) {
+          const size = this.lookU8();
+          object = this.decodeExtension(size, 1);
+        } else if (headByte === 200) {
+          const size = this.lookU16();
+          object = this.decodeExtension(size, 2);
+        } else if (headByte === 201) {
+          const size = this.lookU32();
+          object = this.decodeExtension(size, 4);
+        } else {
+          throw new DecodeError(`Unrecognized type byte: ${prettyByte(headByte)}`);
+        }
+        this.complete();
+        const stack = this.stack;
+        while (stack.length > 0) {
+          const state = stack.top();
+          if (state.type === STATE_ARRAY) {
+            state.array[state.position] = object;
+            state.position++;
+            if (state.position === state.size) {
+              object = state.array;
+              stack.release(state);
+            } else {
+              continue DECODE;
+            }
+          } else if (state.type === STATE_MAP_KEY) {
+            if (object === "__proto__") {
+              throw new DecodeError("The key __proto__ is not allowed");
+            }
+            state.key = this.mapKeyConverter(object);
+            state.type = STATE_MAP_VALUE;
+            continue DECODE;
+          } else {
+            state.map[state.key] = object;
+            state.readCount++;
+            if (state.readCount === state.size) {
+              object = state.map;
+              stack.release(state);
+            } else {
+              state.key = null;
+              state.type = STATE_MAP_KEY;
+              continue DECODE;
+            }
+          }
+        }
+        return object;
+      }
+  }
+  readHeadByte() {
+    if (this.headByte === HEAD_BYTE_REQUIRED) {
+      this.headByte = this.readU8();
+    }
+    return this.headByte;
+  }
+  complete() {
+    this.headByte = HEAD_BYTE_REQUIRED;
+  }
+  readArraySize() {
+    const headByte = this.readHeadByte();
+    switch (headByte) {
+      case 220:
+        return this.readU16();
+      case 221:
+        return this.readU32();
+      default: {
+        if (headByte < 160) {
+          return headByte - 144;
+        } else {
+          throw new DecodeError(`Unrecognized array type byte: ${prettyByte(headByte)}`);
+        }
+      }
+    }
+  }
+  pushMapState(size) {
+    if (size > this.maxMapLength) {
+      throw new DecodeError(`Max length exceeded: map length (${size}) > maxMapLengthLength (${this.maxMapLength})`);
+    }
+    this.stack.pushMapState(size);
+  }
+  pushArrayState(size) {
+    if (size > this.maxArrayLength) {
+      throw new DecodeError(`Max length exceeded: array length (${size}) > maxArrayLength (${this.maxArrayLength})`);
+    }
+    this.stack.pushArrayState(size);
+  }
+  decodeString(byteLength, headerOffset) {
+    if (!this.rawStrings || this.stateIsMapKey()) {
+      return this.decodeUtf8String(byteLength, headerOffset);
+    }
+    return this.decodeBinary(byteLength, headerOffset);
+  }
+  /**
+   * @throws {@link RangeError}
+   */
+  decodeUtf8String(byteLength, headerOffset) {
+    if (byteLength > this.maxStrLength) {
+      throw new DecodeError(`Max length exceeded: UTF-8 byte length (${byteLength}) > maxStrLength (${this.maxStrLength})`);
+    }
+    if (this.bytes.byteLength < this.pos + headerOffset + byteLength) {
+      throw MORE_DATA;
+    }
+    const offset = this.pos + headerOffset;
+    let object;
+    if (this.stateIsMapKey() && this.keyDecoder?.canBeCached(byteLength)) {
+      object = this.keyDecoder.decode(this.bytes, offset, byteLength);
+    } else {
+      object = utf8Decode(this.bytes, offset, byteLength);
+    }
+    this.pos += headerOffset + byteLength;
+    return object;
+  }
+  stateIsMapKey() {
+    if (this.stack.length > 0) {
+      const state = this.stack.top();
+      return state.type === STATE_MAP_KEY;
+    }
+    return false;
+  }
+  /**
+   * @throws {@link RangeError}
+   */
+  decodeBinary(byteLength, headOffset) {
+    if (byteLength > this.maxBinLength) {
+      throw new DecodeError(`Max length exceeded: bin length (${byteLength}) > maxBinLength (${this.maxBinLength})`);
+    }
+    if (!this.hasRemaining(byteLength + headOffset)) {
+      throw MORE_DATA;
+    }
+    const offset = this.pos + headOffset;
+    const object = this.bytes.subarray(offset, offset + byteLength);
+    this.pos += headOffset + byteLength;
+    return object;
+  }
+  decodeExtension(size, headOffset) {
+    if (size > this.maxExtLength) {
+      throw new DecodeError(`Max length exceeded: ext length (${size}) > maxExtLength (${this.maxExtLength})`);
+    }
+    const extType = this.view.getInt8(this.pos + headOffset);
+    const data2 = this.decodeBinary(
+      size,
+      headOffset + 1
+      /* extType */
+    );
+    return this.extensionCodec.decode(data2, extType, this.context);
+  }
+  lookU8() {
+    return this.view.getUint8(this.pos);
+  }
+  lookU16() {
+    return this.view.getUint16(this.pos);
+  }
+  lookU32() {
+    return this.view.getUint32(this.pos);
+  }
+  readU8() {
+    const value = this.view.getUint8(this.pos);
+    this.pos++;
+    return value;
+  }
+  readI8() {
+    const value = this.view.getInt8(this.pos);
+    this.pos++;
+    return value;
+  }
+  readU16() {
+    const value = this.view.getUint16(this.pos);
+    this.pos += 2;
+    return value;
+  }
+  readI16() {
+    const value = this.view.getInt16(this.pos);
+    this.pos += 2;
+    return value;
+  }
+  readU32() {
+    const value = this.view.getUint32(this.pos);
+    this.pos += 4;
+    return value;
+  }
+  readI32() {
+    const value = this.view.getInt32(this.pos);
+    this.pos += 4;
+    return value;
+  }
+  readU64() {
+    const value = getUint64(this.view, this.pos);
+    this.pos += 8;
+    return value;
+  }
+  readI64() {
+    const value = getInt64(this.view, this.pos);
+    this.pos += 8;
+    return value;
+  }
+  readU64AsBigInt() {
+    const value = this.view.getBigUint64(this.pos);
+    this.pos += 8;
+    return value;
+  }
+  readI64AsBigInt() {
+    const value = this.view.getBigInt64(this.pos);
+    this.pos += 8;
+    return value;
+  }
+  readF32() {
+    const value = this.view.getFloat32(this.pos);
+    this.pos += 4;
+    return value;
+  }
+  readF64() {
+    const value = this.view.getFloat64(this.pos);
+    this.pos += 8;
+    return value;
+  }
+};
+
+// node_modules/@msgpack/msgpack/dist.esm/decode.mjs
+function decode(buffer, options) {
+  const decoder = new Decoder(options);
+  return decoder.decode(buffer);
+}
+
+// src/parsers/plistParser.ts
 init_node_shims();
 
 // src/constants.ts
@@ -19086,7 +20095,60 @@ var PLIST_KEYS = {
 };
 var POINT_STRIDE = 4;
 
-// src/plistParser.ts
+// src/parsers/shared/transformUtils.ts
+init_node_shims();
+
+// src/parsers/shared/defaults.ts
+init_node_shims();
+var DEFAULT_COLOR = Object.freeze({
+  r: 0,
+  g: 0,
+  b: 0,
+  a: 1
+});
+var DEFAULT_BRUSH_WIDTH = 2;
+var DEFAULT_IMAGE_SIZE = Object.freeze({
+  x: 100,
+  y: 100
+});
+var TRANSFORM_EPSILON = 1e-4;
+
+// src/parsers/shared/transformUtils.ts
+function isIdentityTransform(transform) {
+  return Math.abs(transform.a - 1) < TRANSFORM_EPSILON && Math.abs(transform.b) < TRANSFORM_EPSILON && Math.abs(transform.c) < TRANSFORM_EPSILON && Math.abs(transform.d - 1) < TRANSFORM_EPSILON && Math.abs(transform.tx) < TRANSFORM_EPSILON && Math.abs(transform.ty) < TRANSFORM_EPSILON;
+}
+function decodeTransformBuffer(buffer) {
+  if (buffer.length !== 64) {
+    return void 0;
+  }
+  const view = new DataView(buffer.buffer, buffer.byteOffset, 64);
+  const transform = {
+    a: view.getFloat32(0, true),
+    // [0] scale/rotate x
+    b: view.getFloat32(4, true),
+    // [1] skew y
+    c: view.getFloat32(16, true),
+    // [4] skew x
+    d: view.getFloat32(20, true),
+    // [5] scale/rotate y
+    tx: view.getFloat32(48, true),
+    // [12] translate x
+    ty: view.getFloat32(52, true)
+    // [13] translate y
+  };
+  return isIdentityTransform(transform) ? void 0 : transform;
+}
+
+// src/parsers/shared/bufferUtils.ts
+init_node_shims();
+function ensureAligned(buffer) {
+  if (buffer.byteOffset % 4 !== 0) {
+    return new Uint8Array(buffer);
+  }
+  return buffer;
+}
+
+// src/parsers/plistParser.ts
 function isUID(value) {
   return value && typeof value === "object" && ("data" in value || "UID" in value);
 }
@@ -19098,10 +20160,7 @@ function getUIDValue(uid) {
   throw new Error("Invalid UID object");
 }
 function decodeFloat32Points(buffer) {
-  let alignedBuffer = buffer;
-  if (buffer.byteOffset % 4 !== 0) {
-    alignedBuffer = new Uint8Array(buffer);
-  }
+  const alignedBuffer = ensureAligned(buffer);
   const floatArray = new Float32Array(alignedBuffer.buffer, alignedBuffer.byteOffset, alignedBuffer.byteLength / 4);
   const points = [];
   for (let i = 0; i < floatArray.length; i += POINT_STRIDE) {
@@ -19132,68 +20191,50 @@ function parseSize(sizeStr) {
   };
 }
 function extractBrushWidth(obj, objects) {
-  const defaultWidth = 2;
   if (!("brushProperties" in obj)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
   const brushPropsUID = obj["brushProperties"];
   if (!isUID(brushPropsUID)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
   const brushProps = objects[getUIDValue(brushPropsUID)];
   if (!brushProps || !("brushWidth" in brushProps)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
   const width = brushProps["brushWidth"];
-  return typeof width === "number" ? width : defaultWidth;
+  return typeof width === "number" ? width : DEFAULT_BRUSH_WIDTH;
 }
 function extractTransform(obj) {
   if (!("diSavedTransform" in obj)) {
     return void 0;
   }
   const transformData = obj["diSavedTransform"];
-  if (!(transformData instanceof Uint8Array) || transformData.length < 24) {
+  if (!(transformData instanceof Uint8Array) || transformData.length < 64) {
     console.warn("Transform data is not valid Uint8Array or too short");
     return void 0;
   }
-  const view = new DataView(transformData.buffer, transformData.byteOffset, 64);
-  const transform = {
-    a: view.getFloat32(0, true),
-    // [0] scale/rotate x
-    b: view.getFloat32(4, true),
-    // [1] skew y
-    c: view.getFloat32(16, true),
-    // [4] skew x
-    d: view.getFloat32(20, true),
-    // [5] scale/rotate y
-    tx: view.getFloat32(48, true),
-    // [12] translate x
-    ty: view.getFloat32(52, true)
-    // [13] translate y
-  };
-  const isIdentity = Math.abs(transform.a - 1) < 1e-4 && Math.abs(transform.b) < 1e-4 && Math.abs(transform.c) < 1e-4 && Math.abs(transform.d - 1) < 1e-4 && Math.abs(transform.tx) < 1e-4 && Math.abs(transform.ty) < 1e-4;
-  return isIdentity ? void 0 : transform;
+  return decodeTransformBuffer(transformData);
 }
 function extractBrushColor(obj, objects) {
-  const defaultColor = { r: 0, g: 0, b: 0, a: 1 };
   if (!("brushProperties" in obj)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
   const brushPropsUID = obj["brushProperties"];
   if (!isUID(brushPropsUID)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
   const brushProps = objects[getUIDValue(brushPropsUID)];
   if (!brushProps || !("brushColor" in brushProps)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
   const brushColorUID = brushProps["brushColor"];
   if (!isUID(brushColorUID)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
   const colorObj = objects[getUIDValue(brushColorUID)];
   if (!colorObj) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
   const r = typeof colorObj["UIRed"] === "number" ? colorObj["UIRed"] : 0;
   const g = typeof colorObj["UIGreen"] === "number" ? colorObj["UIGreen"] : 0;
@@ -19213,7 +20254,7 @@ function extractImageItem(obj, objects) {
   if (typeof uuid !== "string") {
     return null;
   }
-  let size = { x: 100, y: 100 };
+  let size = { ...DEFAULT_IMAGE_SIZE };
   if ("size" in obj) {
     const sizeUID = obj["size"];
     if (isUID(sizeUID)) {
@@ -19254,7 +20295,7 @@ function extractPdfPageItem(obj, objects) {
   if ("page" in obj && typeof obj["page"] === "number") {
     pageNumber = obj["page"] - 1;
   }
-  let size = { x: 100, y: 100 };
+  let size = { ...DEFAULT_IMAGE_SIZE };
   if ("size" in obj) {
     const sizeUID = obj["size"];
     if (isUID(sizeUID)) {
@@ -19384,19 +20425,206 @@ function parseConceptsStrokes(plistData) {
   return { strokes, images };
 }
 
+// src/parsers/messagePackParser.ts
+init_node_shims();
+var DEBUG = typeof window !== "undefined" && (new URLSearchParams(window.location.search).get("debug") === "true" || window.__MSGPACK_DEBUG === true);
+function log(...args) {
+  if (DEBUG) {
+    console.log("[MessagePack]", ...args);
+  }
+}
+function decodeTransform(buffer) {
+  if (buffer.length !== 64) {
+    log("Transform buffer is not 64 bytes:", buffer.length);
+    return void 0;
+  }
+  return decodeTransformBuffer(buffer);
+}
+function decodeColor(buffer, alphaMultiplier) {
+  if (buffer.length !== 16) {
+    log("Color buffer is not 16 bytes:", buffer.length);
+    return { ...DEFAULT_COLOR };
+  }
+  const view = new DataView(buffer.buffer, buffer.byteOffset, 16);
+  const r = view.getFloat32(0, true);
+  const g = view.getFloat32(4, true);
+  const b = view.getFloat32(8, true);
+  let a = view.getFloat32(12, true);
+  if (alphaMultiplier !== void 0) {
+    a *= alphaMultiplier;
+  }
+  return { r, g, b, a };
+}
+function decodeStrokePoints(buffer) {
+  const POINT_SIZE = 16;
+  const pointCount = Math.floor(buffer.length / POINT_SIZE);
+  const points = [];
+  const alignedBuffer = ensureAligned(buffer);
+  const view = new DataView(alignedBuffer.buffer, alignedBuffer.byteOffset, alignedBuffer.byteLength);
+  for (let i = 0; i < pointCount; i++) {
+    const offset = i * POINT_SIZE;
+    const x = view.getFloat32(offset, true);
+    const y = view.getFloat32(offset + 4, true);
+    const pressureRaw = view.getUint16(offset + 8, true);
+    const pressure = pressureRaw / 65535;
+    points.push({ x, y, pressure });
+  }
+  return points;
+}
+function extractBrushProperties(brushData) {
+  try {
+    if (!Array.isArray(brushData)) {
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
+    }
+    const level1 = brushData[1];
+    if (!Array.isArray(level1)) {
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
+    }
+    const level2 = level1[1];
+    if (!Array.isArray(level2)) {
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
+    }
+    const level3 = level2[1];
+    if (!Array.isArray(level3)) {
+      return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
+    }
+    const colorExt = level3[2];
+    const alpha = typeof level3[3] === "number" ? level3[3] : 1;
+    let color = { ...DEFAULT_COLOR };
+    if (colorExt && colorExt.data instanceof Uint8Array && colorExt.data.length === 16) {
+      color = decodeColor(colorExt.data, alpha);
+    }
+    const brushWidth = typeof level2[3] === "number" ? level2[3] : DEFAULT_BRUSH_WIDTH;
+    let transform;
+    if (brushData.length > 7) {
+      const transformExt = brushData[7];
+      if (transformExt && transformExt.data instanceof Uint8Array && transformExt.data.length === 64) {
+        transform = decodeTransform(transformExt.data);
+      }
+    }
+    return { color, width: brushWidth, transform };
+  } catch (e) {
+    log("Error extracting brush properties:", e);
+    return { color: { ...DEFAULT_COLOR }, width: DEFAULT_BRUSH_WIDTH };
+  }
+}
+function processStrokeItem(item) {
+  try {
+    if (!Array.isArray(item) || item.length < 2 || item[0] !== 4) {
+      return null;
+    }
+    const content = item[1];
+    if (!Array.isArray(content) || content.length < 2) {
+      return null;
+    }
+    const strokeData = content[1];
+    if (!Array.isArray(strokeData)) {
+      return null;
+    }
+    if (strokeData[0] !== 6) {
+      log("Not a stroke item, type:", strokeData[0]);
+      return null;
+    }
+    const brushInfo = strokeData[1];
+    const { color, transform } = extractBrushProperties(brushInfo);
+    const displayWidth = typeof strokeData[3] === "number" ? strokeData[3] : DEFAULT_BRUSH_WIDTH;
+    const pointsBuffer = strokeData[17];
+    if (!(pointsBuffer instanceof Uint8Array)) {
+      log("No points buffer found at index 17");
+      return null;
+    }
+    const points = decodeStrokePoints(pointsBuffer);
+    if (points.length === 0) {
+      log("No points decoded");
+      return null;
+    }
+    const closed = strokeData[5] === true;
+    return {
+      points,
+      width: displayWidth,
+      color,
+      transform,
+      closed
+    };
+  } catch (e) {
+    log("Error processing stroke item:", e);
+    return null;
+  }
+}
+function parseConceptsStrokesFromMessagePack(treeData) {
+  log("Parsing MessagePack tree data");
+  if (!Array.isArray(treeData) || treeData.length < 2) {
+    throw new Error("Invalid tree.pack structure: expected [version, data]");
+  }
+  const version2 = treeData[0];
+  const rootData = treeData[1];
+  log("Format version:", version2);
+  log("Root data structure length:", Array.isArray(rootData) ? rootData.length : "N/A");
+  const layers = rootData[4];
+  if (!Array.isArray(layers)) {
+    throw new Error("Invalid tree.pack structure: no layers found at rootData[4]");
+  }
+  log("Number of layers:", layers.length);
+  const strokes = [];
+  for (const layer of layers) {
+    if (!Array.isArray(layer) || layer.length < 3) {
+      continue;
+    }
+    const layerType = layer[0];
+    const layerItems = layer[2];
+    log(`Processing layer type ${layerType}, items:`, Array.isArray(layerItems) ? layerItems.length : "N/A");
+    if (!Array.isArray(layerItems)) {
+      continue;
+    }
+    for (const item of layerItems) {
+      const stroke = processStrokeItem(item);
+      if (stroke) {
+        strokes.push(stroke);
+      }
+    }
+  }
+  log(`Found ${strokes.length} strokes total`);
+  const images = [];
+  return { strokes, images };
+}
+
 // src/fileHandler.ts
 var bplistParser = require_bplistParser();
 bplistParser.maxObjectCount = 1e6;
 var FileHandler = class {
   /**
-   * Process a .concept file and extract drawing data
+   * Detect file format based on ZIP contents
+   */
+  detectFormat(zip) {
+    if (zip.file("tree.pack")) {
+      return "messagepack";
+    }
+    return "plist";
+  }
+  /**
+   * Process a .concept or .concepts file and extract drawing data
    */
   async processConceptFile(file) {
-    if (!file.name.toLowerCase().endsWith(".concept")) {
-      throw new Error("Please select a .concept file");
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith(".concept") && !lowerName.endsWith(".concepts")) {
+      throw new Error("Please select a .concept or .concepts file");
     }
     const arrayBuffer = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(arrayBuffer);
+    const format = this.detectFormat(zip);
+    let drawingData;
+    if (format === "messagepack") {
+      drawingData = await this.processMessagePackFormat(zip);
+    } else {
+      drawingData = await this.processPlistFormat(zip);
+    }
+    await this.loadImportedImages(zip, drawingData);
+    return drawingData;
+  }
+  /**
+   * Process plist format (.concept files from iPad)
+   */
+  async processPlistFormat(zip) {
     const strokesFile = zip.file("Strokes.plist");
     if (!strokesFile) {
       throw new Error("Strokes.plist not found in .concept file");
@@ -19407,27 +20635,44 @@ var FileHandler = class {
       throw new Error("Failed to parse Strokes.plist");
     }
     const plistData = parsed[0];
-    const drawingData = parseConceptsStrokes(plistData);
-    const importedImagesFolder = zip.folder("ImportedImages");
-    if (importedImagesFolder) {
-      const imagePromises = drawingData.images.map(async (image) => {
-        const extensions = ["jpeg", "jpg", "png", "gif", "webp", "pdf"];
-        for (const ext of extensions) {
-          const imageFile = zip.file(`ImportedImages/${image.uuid}.${ext}`);
-          if (imageFile) {
-            const imageBuffer = await imageFile.async("uint8array");
-            const base64 = btoa(
-              Array.from(imageBuffer).map((byte) => String.fromCharCode(byte)).join("")
-            );
-            const mimeType = ext === "pdf" ? "application/pdf" : `image/${ext}`;
-            image.imageData = `data:${mimeType};base64,${base64}`;
-            break;
-          }
-        }
-      });
-      await Promise.all(imagePromises);
+    return parseConceptsStrokes(plistData);
+  }
+  /**
+   * Process MessagePack format (.concepts files from Android/Windows)
+   */
+  async processMessagePackFormat(zip) {
+    const treeFile = zip.file("tree.pack");
+    if (!treeFile) {
+      throw new Error("tree.pack not found in .concepts file");
     }
-    return drawingData;
+    const treeBuffer = await treeFile.async("uint8array");
+    const decoded = decode(treeBuffer);
+    return parseConceptsStrokesFromMessagePack(decoded);
+  }
+  /**
+   * Load images and PDFs from ImportedImages folder
+   */
+  async loadImportedImages(zip, drawingData) {
+    const importedImagesFolder = zip.folder("ImportedImages");
+    if (!importedImagesFolder) {
+      return;
+    }
+    const imagePromises = drawingData.images.map(async (image) => {
+      const extensions = ["jpeg", "jpg", "png", "gif", "webp", "pdf"];
+      for (const ext of extensions) {
+        const imageFile = zip.file(`ImportedImages/${image.uuid}.${ext}`);
+        if (imageFile) {
+          const imageBuffer = await imageFile.async("uint8array");
+          const base64 = btoa(
+            Array.from(imageBuffer).map((byte) => String.fromCharCode(byte)).join("")
+          );
+          const mimeType = ext === "pdf" ? "application/pdf" : `image/${ext}`;
+          image.imageData = `data:${mimeType};base64,${base64}`;
+          break;
+        }
+      }
+    });
+    await Promise.all(imagePromises);
   }
   /**
    * Set up drag-and-drop handlers on an element
@@ -19546,61 +20791,7 @@ function useFileHandler() {
   };
 }
 
-// src/components/FileUploader.tsx
-var import_jsx_runtime = __toESM(require_jsx_runtime());
-function FileUploader() {
-  const navigate = useNavigate();
-  const { setupDragAndDrop, setupFileInput } = useFileHandler();
-  const [status, setStatus] = (0, import_react2.useState)(null);
-  const dropZoneRef = (0, import_react2.useRef)(null);
-  const fileInputRef = (0, import_react2.useRef)(null);
-  (0, import_react2.useEffect)(() => {
-    const handleFileLoaded = (data2) => {
-      setStatus({
-        message: `Loading ${data2.strokes.length} strokes...`,
-        type: "success"
-      });
-      navigate("/viewer", { state: { data: data2 } });
-    };
-    const handleError = (error) => {
-      setStatus({
-        message: `Error: ${error.message}`,
-        type: "error"
-      });
-    };
-    setupDragAndDrop(dropZoneRef.current, handleFileLoaded, handleError);
-    setupFileInput(fileInputRef.current, handleFileLoaded, handleError);
-  }, [setupDragAndDrop, setupFileInput, navigate]);
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: dropZoneRef, id: "drop-zone", className: "drop-zone", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "drop-zone-content", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "64", height: "64", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "17 8 12 3 7 8" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "3", x2: "12", y2: "15" })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: "Drop .concept file here" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "or" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { htmlFor: "file-input", className: "file-input-label", children: "Choose File" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-        "input",
-        {
-          ref: fileInputRef,
-          type: "file",
-          id: "file-input",
-          accept: ".concept",
-          style: { display: "none" }
-        }
-      )
-    ] }) }),
-    status && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `status ${status.type}`, children: status.message })
-  ] });
-}
-
-// src/components/DirectorySelector.tsx
-init_node_shims();
-var import_react3 = __toESM(require_react());
-
-// src/utils/handleStorage.ts
+// src/utils/recentFiles.ts
 init_node_shims();
 
 // node_modules/idb-keyval/dist/index.js
@@ -19650,7 +20841,287 @@ function del(key, customStore = defaultGetStore()) {
   });
 }
 
+// src/utils/recentFiles.ts
+var RECENT_FILES_KEY = "concepts-recent-files";
+var MAX_RECENT_FILES = 10;
+function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+function toStoredFormat(file) {
+  return {
+    ...file,
+    data: Array.from(new Uint8Array(file.data))
+  };
+}
+function fromStoredFormat(stored) {
+  return {
+    ...stored,
+    data: new Uint8Array(stored.data).buffer
+  };
+}
+async function getRecentFiles() {
+  try {
+    const stored = await get(RECENT_FILES_KEY);
+    if (!stored)
+      return [];
+    return stored.map(fromStoredFormat).sort((a, b) => b.lastOpened - a.lastOpened);
+  } catch (error) {
+    console.error("Failed to get recent files:", error);
+    return [];
+  }
+}
+async function addRecentFile(name, data2) {
+  try {
+    const files = await getRecentFiles();
+    const existingIndex = files.findIndex((f) => f.name === name);
+    if (existingIndex !== -1) {
+      files[existingIndex].data = data2;
+      files[existingIndex].size = data2.byteLength;
+      files[existingIndex].lastOpened = Date.now();
+    } else {
+      const newFile = {
+        id: generateId(),
+        name,
+        data: data2,
+        size: data2.byteLength,
+        lastOpened: Date.now()
+      };
+      files.unshift(newFile);
+    }
+    const trimmed = files.slice(0, MAX_RECENT_FILES);
+    await set(RECENT_FILES_KEY, trimmed.map(toStoredFormat));
+  } catch (error) {
+    console.error("Failed to add recent file:", error);
+    throw error;
+  }
+}
+async function removeRecentFile(id) {
+  try {
+    const files = await getRecentFiles();
+    const filtered = files.filter((f) => f.id !== id);
+    await set(RECENT_FILES_KEY, filtered.map(toStoredFormat));
+  } catch (error) {
+    console.error("Failed to remove recent file:", error);
+    throw error;
+  }
+}
+async function clearRecentFiles() {
+  try {
+    await set(RECENT_FILES_KEY, []);
+  } catch (error) {
+    console.error("Failed to clear recent files:", error);
+    throw error;
+  }
+}
+function formatFileSize(bytes) {
+  if (bytes < 1024)
+    return `${bytes} B`;
+  if (bytes < 1024 * 1024)
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function formatDate(timestamp) {
+  const date = new Date(timestamp);
+  const now = /* @__PURE__ */ new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1e3 * 60 * 60 * 24));
+  if (diffDays === 0) {
+    return "Today";
+  } else if (diffDays === 1) {
+    return "Yesterday";
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else {
+    return date.toLocaleDateString();
+  }
+}
+
+// src/components/RecentFiles.tsx
+init_node_shims();
+var import_react2 = __toESM(require_react());
+var import_jsx_runtime = __toESM(require_jsx_runtime());
+var fileHandler2 = new FileHandler();
+function RecentFiles() {
+  const navigate = useNavigate();
+  const [files, setFiles] = (0, import_react2.useState)([]);
+  const [loading, setLoading] = (0, import_react2.useState)(true);
+  const loadFiles = async () => {
+    const recentFiles = await getRecentFiles();
+    setFiles(recentFiles);
+    setLoading(false);
+  };
+  (0, import_react2.useEffect)(() => {
+    loadFiles();
+  }, []);
+  const handleOpenFile = async (file) => {
+    try {
+      const blob = new Blob([file.data]);
+      const fileObj = new File([blob], file.name, { type: "application/octet-stream" });
+      const data2 = await fileHandler2.processConceptFile(fileObj);
+      navigate("/viewer", { state: { data: data2 } });
+    } catch (error) {
+      console.error("Failed to open recent file:", error);
+    }
+  };
+  const handleRemoveFile = async (e, id) => {
+    e.stopPropagation();
+    await removeRecentFile(id);
+    loadFiles();
+  };
+  const handleClearAll = async () => {
+    await clearRecentFiles();
+    loadFiles();
+  };
+  if (loading)
+    return null;
+  if (files.length === 0)
+    return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "recent-files", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "recent-files-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { children: "Recent Files" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "clear-all-button", onClick: handleClearAll, children: "Clear All" })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "recent-files-list", children: files.map((file) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "recent-file-item", onClick: () => handleOpenFile(file), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "recent-file-icon", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "14 2 14 8 20 8" })
+      ] }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "recent-file-info", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "recent-file-name", children: file.name }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "recent-file-meta", children: [
+          formatFileSize(file.size),
+          " \xB7 ",
+          formatDate(file.lastOpened)
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "button",
+        {
+          className: "recent-file-remove",
+          onClick: (e) => handleRemoveFile(e, file.id),
+          title: "Remove from recent files",
+          children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "18", y1: "6", x2: "6", y2: "18" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "6", y1: "6", x2: "18", y2: "18" })
+          ] })
+        }
+      )
+    ] }, file.id)) })
+  ] });
+}
+
+// src/components/FileUploader.tsx
+var import_jsx_runtime2 = __toESM(require_jsx_runtime());
+function FileUploader({ onBrowseDirectory, browseError }) {
+  const navigate = useNavigate();
+  const { processFile } = useFileHandler();
+  const [status, setStatus] = (0, import_react3.useState)(null);
+  const [recentFilesKey, setRecentFilesKey] = (0, import_react3.useState)(0);
+  const dropZoneRef = (0, import_react3.useRef)(null);
+  const fileInputRef = (0, import_react3.useRef)(null);
+  const handleFile = (0, import_react3.useCallback)(async (file) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      await addRecentFile(file.name, arrayBuffer);
+      setRecentFilesKey((k) => k + 1);
+      const data2 = await processFile(file);
+      setStatus({
+        message: `Loading ${data2.strokes.length} strokes...`,
+        type: "success"
+      });
+      navigate("/viewer", { state: { data: data2 } });
+    } catch (error) {
+      setStatus({
+        message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        type: "error"
+      });
+    }
+  }, [processFile, navigate]);
+  (0, import_react3.useEffect)(() => {
+    const dropZone = dropZoneRef.current;
+    const fileInput = fileInputRef.current;
+    if (!dropZone || !fileInput)
+      return;
+    const preventDefaults = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const highlight = () => dropZone.classList.add("drag-over");
+    const unhighlight = () => dropZone.classList.remove("drag-over");
+    const handleDrop = (e) => {
+      unhighlight();
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        handleFile(files[0]);
+      }
+    };
+    const handleInputChange = () => {
+      const files = fileInput.files;
+      if (files && files.length > 0) {
+        handleFile(files[0]);
+      }
+    };
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((event) => {
+      dropZone.addEventListener(event, preventDefaults);
+    });
+    ["dragenter", "dragover"].forEach((event) => {
+      dropZone.addEventListener(event, highlight);
+    });
+    ["dragleave", "drop"].forEach((event) => {
+      dropZone.addEventListener(event, unhighlight);
+    });
+    dropZone.addEventListener("drop", handleDrop);
+    fileInput.addEventListener("change", handleInputChange);
+    return () => {
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((event) => {
+        dropZone.removeEventListener(event, preventDefaults);
+      });
+      ["dragenter", "dragover"].forEach((event) => {
+        dropZone.removeEventListener(event, highlight);
+      });
+      ["dragleave", "drop"].forEach((event) => {
+        dropZone.removeEventListener(event, unhighlight);
+      });
+      dropZone.removeEventListener("drop", handleDrop);
+      fileInput.removeEventListener("change", handleInputChange);
+    };
+  }, [handleFile]);
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { ref: dropZoneRef, id: "drop-zone", className: "drop-zone", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "drop-zone-content", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: "64", height: "64", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "17 8 12 3 7 8" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("line", { x1: "12", y1: "3", x2: "12", y2: "15" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { children: "Drop .concept or .concepts file here" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: "or" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("label", { htmlFor: "file-input", className: "file-input-label", children: "Choose File" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "input",
+        {
+          ref: fileInputRef,
+          type: "file",
+          id: "file-input",
+          accept: ".concept,.concepts",
+          style: { display: "none" }
+        }
+      )
+    ] }) }),
+    onBrowseDirectory && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "browse-directory-section", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "browse-hint", children: "Or browse your iCloud Concepts folder" }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { className: "button secondary", onClick: onBrowseDirectory, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }),
+        "Select Folder"
+      ] }),
+      browseError && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "status error", children: browseError })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(RecentFiles, {}, recentFilesKey),
+    status && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: `status ${status.type}`, children: status.message })
+  ] });
+}
+
 // src/utils/handleStorage.ts
+init_node_shims();
 var ROOT_HANDLE_KEY = "concepts-root-directory-handle";
 function isFileSystemAccessSupported() {
   return "showDirectoryPicker" in window;
@@ -19692,10 +21163,11 @@ async function restoreDirectoryHandle() {
   }
 }
 async function clearDirectoryState() {
+  localStorage.removeItem("concepts-gallery-path");
   try {
     await del(ROOT_HANDLE_KEY);
   } catch (error) {
-    console.error("Failed to clear directory state:", error);
+    console.error("Failed to clear directory handle:", error);
   }
 }
 async function navigateToPath(rootHandle, path) {
@@ -19710,98 +21182,119 @@ async function navigateToPath(rootHandle, path) {
   return currentHandle;
 }
 
-// src/components/DirectorySelector.tsx
-var import_jsx_runtime2 = __toESM(require_jsx_runtime());
-function DirectorySelector() {
-  const navigate = useNavigate();
-  const [error, setError] = (0, import_react3.useState)(null);
-  const handleSelectDirectory = async () => {
-    if (!isFileSystemAccessSupported()) {
-      setError(
-        'Directory browsing is only supported in Chrome and Edge browsers. Please use the "Single File" tab to open individual .concept files.'
-      );
-      return;
-    }
-    setError(null);
-    try {
-      const dirHandle = await window.showDirectoryPicker({
-        mode: "read"
-      });
-      await saveDirectoryHandle(dirHandle);
-      navigate("/gallery");
-    } catch (err) {
-      if (err instanceof Error) {
-        if (err.name === "AbortError") {
-          return;
-        }
-        setError(err.message);
-      } else {
-        setError("Failed to select directory");
-      }
-    }
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "directory-selector", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "directory-selector-content", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "80", height: "80", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { children: "Browse Concepts Directory" }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { children: "Select a directory containing .concept files to browse with thumbnails. Subdirectories will be loaded as you navigate into them." }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "button", onClick: handleSelectDirectory, children: "Select Directory" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "status error", style: { marginTop: "1rem" }, children: error }),
-    !isFileSystemAccessSupported() && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "status error", style: { marginTop: "1rem" }, children: [
-      "Directory browsing requires Chrome or Edge browser.",
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("br", {}),
-      'Use the "Single File" tab for other browsers.'
-    ] })
-  ] }) });
-}
-
 // src/pages/Home.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
-var TAB_STORAGE_KEY = "concepts-active-tab";
 function Home() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = (0, import_react4.useState)(() => {
-    const saved = localStorage.getItem(TAB_STORAGE_KEY);
-    return saved || "single";
-  });
-  (0, import_react4.useEffect)(() => {
-    localStorage.setItem(TAB_STORAGE_KEY, activeTab);
-  }, [activeTab]);
-  const handleTabChange = async (tab) => {
-    setActiveTab(tab);
-    if (tab === "directory") {
-      const rootHandle = await restoreDirectoryHandle();
-      if (rootHandle) {
-        navigate("/gallery");
+  const [guideExpanded, setGuideExpanded] = (0, import_react4.useState)(false);
+  const [dirError, setDirError] = (0, import_react4.useState)(null);
+  const handleBrowseDirectory = async () => {
+    if (!isFileSystemAccessSupported()) {
+      setDirError("Directory browsing requires Chrome or Edge browser.");
+      return;
+    }
+    setDirError(null);
+    const existingHandle = await restoreDirectoryHandle();
+    if (existingHandle) {
+      navigate("/gallery");
+      return;
+    }
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      await saveDirectoryHandle(dirHandle);
+      localStorage.removeItem("concepts-gallery-path");
+      navigate("/gallery");
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setDirError(err.message);
       }
     }
   };
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "container", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("header", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h1", { children: "Concepts File Viewer" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "View iOS Concepts app drawings in your browser" })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Link, { to: "/", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("img", { src: "favicon.png", alt: "Logo", className: "header-logo" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "header-text", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h1", { children: "Concepts File Viewer" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "View Concepts app drawings in your browser" })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "tabs", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "guide-section", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
         "button",
         {
-          className: `tab ${activeTab === "single" ? "active" : ""}`,
-          onClick: () => handleTabChange("single"),
-          children: "Single File"
+          className: "guide-toggle",
+          onClick: () => setGuideExpanded(!guideExpanded),
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "How do I get .concepts files?" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+              "svg",
+              {
+                className: `guide-chevron ${guideExpanded ? "expanded" : ""}`,
+                width: "20",
+                height: "20",
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: "2",
+                children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("polyline", { points: "6 9 12 15 18 9" })
+              }
+            )
+          ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          className: `tab ${activeTab === "directory" ? "active" : ""}`,
-          onClick: () => handleTabChange("directory"),
-          children: "Browse Directory"
-        }
-      )
+      guideExpanded && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "guide-content", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "guide-column", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { children: "Drop or Choose File" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "Export a drawing from the Concepts app:" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("ol", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("li", { children: "Open your drawing in Concepts" }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              "Tap the ",
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "Share" }),
+              " button"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              "Select ",
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "Export" }),
+              " \u2192 ",
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "Concepts" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("li", { children: "Save to Files or AirDrop to your computer" })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "guide-column", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { children: "Browse Directory" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "Access your full Concepts library via iCloud:" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("ol", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              "Enable ",
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "iCloud Drive" }),
+              " sync on your device"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "macOS:" }),
+              " Enable iCloud Drive in System Settings \u2192 Apple ID \u2192 iCloud"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "Windows:" }),
+              " Install ",
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("a", { href: "https://support.apple.com/en-us/HT204283", target: "_blank", rel: "noopener noreferrer", children: "iCloud for Windows" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
+              'Click "Select Folder" and navigate to: ',
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("code", { children: "iCloud Drive/Concepts/drawings/" })
+            ] })
+          ] })
+        ] })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "tab-content", children: [
-      activeTab === "single" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(FileUploader, {}),
-      activeTab === "directory" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(DirectorySelector, {})
-    ] })
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "main-content", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      FileUploader,
+      {
+        onBrowseDirectory: handleBrowseDirectory,
+        browseError: dirError
+      }
+    ) })
   ] });
 }
 
@@ -21026,7 +22519,7 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
   if (!newURL) {
     return defaultFilename;
   }
-  const decode = (name) => {
+  const decode2 = (name) => {
     try {
       let decoded = decodeURIComponent(name);
       if (decoded.includes("/")) {
@@ -21044,19 +22537,19 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
   const pdfRegex = /\.pdf$/i;
   const filename = newURL.pathname.split("/").at(-1);
   if (pdfRegex.test(filename)) {
-    return decode(filename);
+    return decode2(filename);
   }
   if (newURL.searchParams.size > 0) {
     const values = Array.from(newURL.searchParams.values()).reverse();
     for (const value of values) {
       if (pdfRegex.test(value)) {
-        return decode(value);
+        return decode2(value);
       }
     }
     const keys = Array.from(newURL.searchParams.keys()).reverse();
     for (const key of keys) {
       if (pdfRegex.test(key)) {
-        return decode(key);
+        return decode2(key);
       }
     }
   }
@@ -21064,7 +22557,7 @@ function getPdfFilenameFromUrl(url, defaultFilename = "document.pdf") {
     const reFilename = /[^/?#=]+\.pdf\b(?!.*\.pdf\b)/i;
     const hashFilename = reFilename.exec(newURL.hash);
     if (hashFilename) {
-      return decode(hashFilename[0]);
+      return decode2(hashFilename[0]);
     }
   }
   return defaultFilename;
@@ -45951,10 +47444,11 @@ async function scanDirectoryLazy(dirHandle, onProgress) {
       if (onProgress) {
         onProgress(count);
       }
-      if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".concept")) {
+      const lowerName = entry.name.toLowerCase();
+      if (entry.kind === "file" && (lowerName.endsWith(".concept") || lowerName.endsWith(".concepts"))) {
         const file = await entry.getFile();
         files.push({
-          name: entry.name.replace(/\.concept$/i, ""),
+          name: entry.name.replace(/\.concepts?$/i, ""),
           fullName: entry.name,
           fileHandle: entry,
           size: file.size,
@@ -46013,9 +47507,9 @@ async function loadThumbnails(files, onProgress, signal) {
     );
   }
 }
-function getPathBreadcrumbs(path) {
+function getPathBreadcrumbs(path, rootName) {
   const breadcrumbs = [
-    { name: "Root", path: [] }
+    { name: rootName || "Root", path: [] }
   ];
   for (let i = 0; i < path.length; i++) {
     breadcrumbs.push({
@@ -46031,6 +47525,7 @@ var import_jsx_runtime8 = __toESM(require_jsx_runtime());
 function DirectoryBrowser({
   currentHandle,
   currentPath,
+  rootFolderName,
   onNavigateTo,
   onNavigateInto,
   onNavigateUp,
@@ -46077,7 +47572,7 @@ function DirectoryBrowser({
       cancelled = true;
     };
   }, [currentHandle]);
-  const breadcrumbs = getPathBreadcrumbs(currentPath);
+  const breadcrumbs = getPathBreadcrumbs(currentPath, rootFolderName);
   const handleBreadcrumbClick = (path) => {
     onNavigateTo(path).catch((err) => {
       console.error("Navigation failed:", err);
@@ -46138,7 +47633,7 @@ function DirectoryBrowser({
             }
           )
         ] }, crumb.path.join("/"))),
-        isLoadingThumbnails && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: "0.85rem", color: "#667eea" }, children: "Loading thumbnails..." })
+        isLoadingThumbnails && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { fontSize: "0.85rem", color: "#FF9500" }, children: "Loading thumbnails..." })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         "button",
@@ -46199,6 +47694,7 @@ function useGalleryState(pathFromUrl) {
         console.error("Failed to navigate to path:", err);
         setError(`Failed to navigate to: ${pathFromUrl.join("/")}`);
         setCurrentHandle(null);
+        localStorage.removeItem("concepts-gallery-path");
       }
     });
     return () => {
@@ -46215,18 +47711,10 @@ function useGalleryState(pathFromUrl) {
 
 // src/pages/GalleryPage.tsx
 var import_jsx_runtime9 = __toESM(require_jsx_runtime());
-var TAB_STORAGE_KEY2 = "concepts-active-tab";
 var GALLERY_PATH_STORAGE_KEY = "concepts-gallery-path";
 function GalleryPage() {
   const params = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = (0, import_react10.useState)(() => {
-    const saved = localStorage.getItem(TAB_STORAGE_KEY2);
-    return saved || "directory";
-  });
-  (0, import_react10.useEffect)(() => {
-    localStorage.setItem(TAB_STORAGE_KEY2, activeTab);
-  }, [activeTab]);
   const pathParam = params["*"] || "";
   const currentPath = (0, import_react10.useMemo)(
     () => pathParam ? pathParam.split("/").map(decodeURIComponent).filter(Boolean) : [],
@@ -46249,16 +47737,11 @@ function GalleryPage() {
           }
         } catch (error2) {
           console.error("Failed to parse saved gallery path:", error2);
+          localStorage.removeItem(GALLERY_PATH_STORAGE_KEY);
         }
       }
     }
   }, []);
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    if (tab === "single") {
-      navigate("/");
-    }
-  };
   const { rootHandle, currentHandle, isRestoring, error } = useGalleryState(currentPath);
   const handleNavigateTo = async (path) => {
     const encodedPath = path.map(encodeURIComponent).join("/");
@@ -46275,14 +47758,26 @@ function GalleryPage() {
     }
   };
   const handleSelectDifferentDirectory = async () => {
-    await clearDirectoryState();
-    navigate("/");
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      await clearDirectoryState();
+      await saveDirectoryHandle(dirHandle);
+      navigate("/gallery", { replace: true });
+      window.location.reload();
+    } catch (err) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.error("Failed to select directory:", err);
+      }
+    }
   };
   if (isRestoring) {
     return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Restoring session..." })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: "/", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("img", { src: "favicon.png", alt: "Logo", className: "header-logo" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "header-text", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Restoring session..." })
+        ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { textAlign: "center", padding: "4rem 2rem" }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "spinner", style: { margin: "0 auto 1rem" } }),
@@ -46293,8 +47788,11 @@ function GalleryPage() {
   if (!rootHandle) {
     return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "No directory selected" })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: "/", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("img", { src: "favicon.png", alt: "Logo", className: "header-logo" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "header-text", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "No directory selected" })
+        ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "status error", style: { margin: "2rem" }, children: "No directory selected. Please go back and select a directory." }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { textAlign: "center", marginTop: "1rem" }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "button", onClick: () => navigate("/"), children: "Back to Home" }) })
@@ -46303,8 +47801,11 @@ function GalleryPage() {
   if (error || !currentHandle) {
     return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts Gallery" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Error loading directory" })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: "/", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("img", { src: "favicon.png", alt: "Logo", className: "header-logo" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "header-text", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "Error loading directory" })
+        ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "status error", style: { margin: "2rem" }, children: error || "Failed to load directory" }),
       /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { textAlign: "center", marginTop: "1rem" }, children: [
@@ -46323,32 +47824,25 @@ function GalleryPage() {
   }
   return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "container", children: [
     /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "View iOS Concepts app drawings in your browser" })
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Link, { to: "/", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("img", { src: "favicon.png", alt: "Logo", className: "header-logo" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "header-text", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h1", { children: "Concepts File Viewer" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "View Concepts app drawings in your browser" })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "tabs", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-        "button",
-        {
-          className: `tab ${activeTab === "single" ? "active" : ""}`,
-          onClick: () => handleTabChange("single"),
-          children: "Single File"
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-        "button",
-        {
-          className: `tab ${activeTab === "directory" ? "active" : ""}`,
-          onClick: () => handleTabChange("directory"),
-          children: "Browse Directory"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "tab-content", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "action-bar", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("button", { className: "button secondary", onClick: () => navigate("/"), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("line", { x1: "19", y1: "12", x2: "5", y2: "12" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("polyline", { points: "12 19 5 12 12 5" })
+      ] }),
+      "Back"
+    ] }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "main-content", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       DirectoryBrowser,
       {
         currentHandle,
         currentPath,
+        rootFolderName: rootHandle.name,
         onNavigateTo: handleNavigateTo,
         onNavigateInto: handleNavigateInto,
         onNavigateUp: handleNavigateUp,
@@ -46364,7 +47858,8 @@ function App() {
   return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(HashRouter, { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(Routes, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Home, {}) }),
     /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/gallery/*", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(GalleryPage, {}) }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/viewer", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(ViewerPage, {}) })
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "/viewer", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(ViewerPage, {}) }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Route, { path: "*", element: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Navigate, { to: "/", replace: true }) })
   ] }) });
 }
 
@@ -46372,7 +47867,7 @@ function App() {
 var import_jsx_runtime11 = __toESM(require_jsx_runtime());
 console.log(
   "%c\u{1F3A8} Concepts File Viewer",
-  "font-size: 16px; font-weight: bold; color: #667eea;"
+  "font-size: 16px; font-weight: bold; color: #FF9500;"
 );
 var root = document.getElementById("root");
 if (!root) {
