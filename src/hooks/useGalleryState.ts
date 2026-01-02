@@ -50,6 +50,8 @@ export function useGalleryState(pathFromUrl: string[]) {
           console.error('Failed to navigate to path:', err);
           setError(`Failed to navigate to: ${pathFromUrl.join('/')}`);
           setCurrentHandle(null);
+          // Clear the saved path so we don't keep trying to restore an invalid path
+          localStorage.removeItem('concepts-gallery-path');
         }
       });
 

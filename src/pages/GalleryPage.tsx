@@ -1,28 +1,14 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useMemo, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { DirectoryBrowser } from '../components/DirectoryBrowser';
 import { useGalleryState } from '../hooks/useGalleryState';
-import { clearDirectoryState } from '../utils/handleStorage';
+import { clearDirectoryState, saveDirectoryHandle } from '../utils/handleStorage';
 
-type Tab = 'single' | 'directory';
-
-const TAB_STORAGE_KEY = 'concepts-active-tab';
 const GALLERY_PATH_STORAGE_KEY = 'concepts-gallery-path';
 
 export function GalleryPage() {
   const params = useParams();
   const navigate = useNavigate();
-
-  // Initialize tab from localStorage or default to 'directory' (since we're on gallery page)
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const saved = localStorage.getItem(TAB_STORAGE_KEY);
-    return (saved as Tab) || 'directory';
-  });
-
-  // Save tab selection to localStorage
-  useEffect(() => {
-    localStorage.setItem(TAB_STORAGE_KEY, activeTab);
-  }, [activeTab]);
 
   // Get path from URL wildcard parameter
   // Use useMemo to stabilize array reference for React dependencies
@@ -53,19 +39,11 @@ export function GalleryPage() {
           }
         } catch (error) {
           console.error('Failed to parse saved gallery path:', error);
+          localStorage.removeItem(GALLERY_PATH_STORAGE_KEY);
         }
       }
     }
   }, []); // Run only on mount
-
-  // Handle tab change
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    if (tab === 'single') {
-      // Current path is already saved in the useEffect above
-      navigate('/');
-    }
-  };
 
   const { rootHandle, currentHandle, isRestoring, error } = useGalleryState(currentPath);
 
@@ -87,16 +65,31 @@ export function GalleryPage() {
   };
 
   const handleSelectDifferentDirectory = async () => {
-    await clearDirectoryState();
-    navigate('/');
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+      await clearDirectoryState();
+      await saveDirectoryHandle(dirHandle);
+      // Navigate to gallery root with new directory
+      navigate('/gallery', { replace: true });
+      // Force a page reload to reset state with new directory
+      window.location.reload();
+    } catch (err) {
+      // User cancelled the picker - do nothing, stay on current view
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Failed to select directory:', err);
+      }
+    }
   };
 
   if (isRestoring) {
     return (
       <div className="container">
         <header>
-          <h1>Concepts Gallery</h1>
-          <p>Restoring session...</p>
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
+          <div className="header-text">
+            <h1>Concepts File Viewer</h1>
+            <p>Restoring session...</p>
+          </div>
         </header>
         <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
@@ -110,8 +103,11 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
-          <h1>Concepts Gallery</h1>
-          <p>No directory selected</p>
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
+          <div className="header-text">
+            <h1>Concepts File Viewer</h1>
+            <p>No directory selected</p>
+          </div>
         </header>
         <div className="status error" style={{ margin: '2rem' }}>
           No directory selected. Please go back and select a directory.
@@ -129,8 +125,11 @@ export function GalleryPage() {
     return (
       <div className="container">
         <header>
-          <h1>Concepts Gallery</h1>
-          <p>Error loading directory</p>
+          <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
+          <div className="header-text">
+            <h1>Concepts File Viewer</h1>
+            <p>Error loading directory</p>
+          </div>
         </header>
         <div className="status error" style={{ margin: '2rem' }}>
           {error || 'Failed to load directory'}
@@ -154,29 +153,28 @@ export function GalleryPage() {
   return (
     <div className="container">
       <header>
-        <h1>Concepts File Viewer</h1>
-        <p>View iOS Concepts app drawings in your browser</p>
+        <Link to="/"><img src="favicon.png" alt="Logo" className="header-logo" /></Link>
+        <div className="header-text">
+          <h1>Concepts File Viewer</h1>
+          <p>View Concepts app drawings in your browser</p>
+        </div>
       </header>
 
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'single' ? 'active' : ''}`}
-          onClick={() => handleTabChange('single')}
-        >
-          Single File
-        </button>
-        <button
-          className={`tab ${activeTab === 'directory' ? 'active' : ''}`}
-          onClick={() => handleTabChange('directory')}
-        >
-          Browse Directory
+      <div className="action-bar">
+        <button className="button secondary" onClick={() => navigate('/')}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Back
         </button>
       </div>
 
-      <div className="tab-content">
+      <div className="main-content">
         <DirectoryBrowser
           currentHandle={currentHandle}
           currentPath={currentPath}
+          rootFolderName={rootHandle.name}
           onNavigateTo={handleNavigateTo}
           onNavigateInto={handleNavigateInto}
           onNavigateUp={handleNavigateUp}

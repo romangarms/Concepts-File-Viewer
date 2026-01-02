@@ -1,4 +1,4 @@
-import type { Stroke, DrawingData } from './types.js';
+import type { Stroke, DrawingData } from './types/index.js';
 import { ImageRenderer } from './imageRenderer.js';
 
 // Zoom configuration constants
@@ -233,7 +233,7 @@ export class StrokeRenderer {
   /**
    * Apply transform to a point
    */
-  private transformPoint(point: { x: number; y: number }, transform?: import('./types.js').Transform): { x: number; y: number } {
+  private transformPoint(point: { x: number; y: number }, transform?: import('./types/index.js').Transform): { x: number; y: number } {
     if (!transform) {
       return point;
     }
@@ -249,7 +249,7 @@ export class StrokeRenderer {
    * Apply Concepts transform to canvas context
    * Now that we have global Y-flip, just apply transform as-is
    */
-  private applyConceptsTransform(transform: import('./types.js').Transform): void {
+  private applyConceptsTransform(transform: import('./types/index.js').Transform): void {
     // Apply the affine transform matrix directly (Y-flip is handled globally)
     this.ctx.transform(
       transform.a,

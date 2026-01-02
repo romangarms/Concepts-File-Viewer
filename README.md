@@ -37,6 +37,5 @@ Open http://localhost:8000 and drag a .concept file onto the page.
 
 ## Todo:
 - **Support for other drawing tools** - Dotted line tool, images, etc
-- **Gallery with thumbnails** - open directory of projects, display thumbnails
 - **Desktop app** - allows for file association, double-click a concept file to view!
-- **Better UI** - Current view is thrown together in 2 minutes, need something more space-efficient
+- **Better UI** - Current view is functional, but could use space better and offer more options

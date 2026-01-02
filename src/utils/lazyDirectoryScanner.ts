@@ -1,25 +1,5 @@
 import { extractThumbnail } from './thumbnailExtractor';
-
-export interface FileHandleInfo {
-  name: string;              // Display name (without .concept extension)
-  fullName: string;          // Full filename including extension
-  fileHandle: FileSystemFileHandle;
-  size: number;
-  modified: number;
-  thumbnail?: string;        // Base64 data URL, loaded on-demand
-  isLoading?: boolean;       // True while thumbnail is being extracted
-}
-
-export interface DirectoryHandleInfo {
-  name: string;
-  dirHandle: FileSystemDirectoryHandle;
-  fileCount?: number;        // Number of .concept files, counted on-demand
-}
-
-export interface DirectoryContents {
-  files: FileHandleInfo[];
-  subdirectories: DirectoryHandleInfo[];
-}
+import type { FileHandleInfo, DirectoryHandleInfo, DirectoryContents } from '../types/gallery.js';
 
 /**
  * Scan a directory for .concept files and subdirectories
@@ -47,12 +27,13 @@ export async function scanDirectoryLazy(
         onProgress(count);
       }
 
-      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.concept')) {
+      const lowerName = entry.name.toLowerCase();
+      if (entry.kind === 'file' && (lowerName.endsWith('.concept') || lowerName.endsWith('.concepts'))) {
         // Get file metadata without reading contents
         const file = await entry.getFile();
 
         files.push({
-          name: entry.name.replace(/\.concept$/i, ''),
+          name: entry.name.replace(/\.concepts?$/i, ''),
           fullName: entry.name,
           fileHandle: entry,
           size: file.size,
@@ -149,7 +130,8 @@ export async function countConceptFiles(
 
   try {
     for await (const entry of dirHandle.values()) {
-      if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.concept')) {
+      const lowerName = entry.name.toLowerCase();
+      if (entry.kind === 'file' && (lowerName.endsWith('.concept') || lowerName.endsWith('.concepts'))) {
         count++;
       } else if (entry.kind === 'directory') {
         // Recursively count files in subdirectories
@@ -166,9 +148,9 @@ export async function countConceptFiles(
 /**
  * Get breadcrumb path components for navigation
  */
-export function getPathBreadcrumbs(path: string[]): Array<{ name: string; path: string[] }> {
+export function getPathBreadcrumbs(path: string[], rootName?: string): Array<{ name: string; path: string[] }> {
   const breadcrumbs: Array<{ name: string; path: string[] }> = [
-    { name: 'Root', path: [] },
+    { name: rootName || 'Root', path: [] },
   ];
 
   for (let i = 0; i < path.length; i++) {

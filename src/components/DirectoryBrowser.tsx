@@ -6,14 +6,13 @@ import {
   scanDirectoryLazy,
   loadThumbnails,
   getPathBreadcrumbs,
-  type FileHandleInfo,
-  type DirectoryHandleInfo,
-  type DirectoryContents,
 } from '../utils/lazyDirectoryScanner';
+import type { FileHandleInfo, DirectoryHandleInfo, DirectoryContents } from '../types/gallery.js';
 
 interface DirectoryBrowserProps {
   currentHandle: FileSystemDirectoryHandle;
   currentPath: string[];
+  rootFolderName: string;
   onNavigateTo: (path: string[]) => Promise<void>;
   onNavigateInto: (dirName: string) => Promise<void>;
   onNavigateUp: () => Promise<void>;
@@ -23,6 +22,7 @@ interface DirectoryBrowserProps {
 export function DirectoryBrowser({
   currentHandle,
   currentPath,
+  rootFolderName,
   onNavigateTo,
   onNavigateInto,
   onNavigateUp,
@@ -85,7 +85,7 @@ export function DirectoryBrowser({
     };
   }, [currentHandle]);
 
-  const breadcrumbs = getPathBreadcrumbs(currentPath);
+  const breadcrumbs = getPathBreadcrumbs(currentPath, rootFolderName);
 
   const handleBreadcrumbClick = (path: string[]) => {
     onNavigateTo(path).catch((err) => {
@@ -174,7 +174,7 @@ export function DirectoryBrowser({
           ))}
 
           {isLoadingThumbnails && (
-            <div style={{ fontSize: '0.85rem', color: '#667eea' }}>
+            <div style={{ fontSize: '0.85rem', color: '#FF9500' }}>
               Loading thumbnails...
             </div>
           )}

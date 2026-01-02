@@ -1,5 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import type { ImportedImage, Transform } from './types.js';
+import type { ImportedImage, Transform } from './types/index.js';
 
 // Configure PDF.js worker
 // In production (GitHub Pages), the worker is at ./pdf.worker.mjs relative to index.html

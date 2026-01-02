@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useStrokeRenderer } from '../hooks/useStrokeRenderer.js';
 import { ZoomControls } from '../components/ZoomControls.js';
 import { Toast } from '../components/Toast.js';
-import type { DrawingData } from '../types.js';
+import type { DrawingData } from '../types/index.js';
 
 export function ViewerPage() {
   const location = useLocation();

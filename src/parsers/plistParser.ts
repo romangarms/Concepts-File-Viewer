@@ -3,8 +3,11 @@ import {
   KEY_POINT_FIELDS,
   PLIST_KEYS,
   POINT_STRIDE
-} from './constants.js';
-import type { Stroke, Point, PlistObject, DrawingData, Color, Transform, ImportedImage } from './types.js';
+} from '../constants.js';
+import type { Stroke, Point, PlistObject, DrawingData, Color, Transform, ImportedImage } from '../types/index.js';
+import { decodeTransformBuffer } from './shared/transformUtils.js';
+import { ensureAligned } from './shared/bufferUtils.js';
+import { DEFAULT_COLOR, DEFAULT_BRUSH_WIDTH, DEFAULT_IMAGE_SIZE } from './shared/defaults.js';
 
 /**
  * Checks if a value is a UID reference object
@@ -27,11 +30,7 @@ function getUIDValue(uid: any): number {
  * Decodes float32 point data from a binary buffer
  */
 function decodeFloat32Points(buffer: Uint8Array): Point[] {
-  // Create a copy if the buffer isn't properly aligned for Float32Array
-  let alignedBuffer = buffer;
-  if (buffer.byteOffset % 4 !== 0) {
-    alignedBuffer = new Uint8Array(buffer);
-  }
+  const alignedBuffer = ensureAligned(buffer);
 
   const floatArray = new Float32Array(alignedBuffer.buffer, alignedBuffer.byteOffset, alignedBuffer.byteLength / 4);
   const points: Point[] = [];
@@ -76,32 +75,27 @@ function parseSize(sizeStr: string): Point | null {
  * Extracts brush width from brushProperties object
  */
 function extractBrushWidth(obj: PlistObject, objects: PlistObject[]): number {
-  const defaultWidth = 2.0; // Default brush width if not found
-
   if (!('brushProperties' in obj)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
 
   const brushPropsUID = obj['brushProperties'];
   if (!isUID(brushPropsUID)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
 
   const brushProps = objects[getUIDValue(brushPropsUID)];
   if (!brushProps || !('brushWidth' in brushProps)) {
-    return defaultWidth;
+    return DEFAULT_BRUSH_WIDTH;
   }
 
   const width = brushProps['brushWidth'];
-  return typeof width === 'number' ? width : defaultWidth;
+  return typeof width === 'number' ? width : DEFAULT_BRUSH_WIDTH;
 }
 
 /**
  * Decodes a CGAffineTransform from diSavedTransform buffer
- * The buffer contains 48 bytes, but we only need the first 24 bytes (6 floats)
- * Format: [a, b, c, d, tx, ty] where:
- * - a, b, c, d form the 2x2 rotation/scale matrix
- * - tx, ty are the translation offsets
+ * Uses the shared transform decoder for the actual buffer parsing
  */
 function extractTransform(obj: PlistObject): Transform | undefined {
   if (!('diSavedTransform' in obj)) {
@@ -110,65 +104,40 @@ function extractTransform(obj: PlistObject): Transform | undefined {
 
   const transformData = obj['diSavedTransform'];
 
-  if (!(transformData instanceof Uint8Array) || transformData.length < 24) {
+  if (!(transformData instanceof Uint8Array) || transformData.length < 64) {
     console.warn('Transform data is not valid Uint8Array or too short');
     return undefined;
   }
 
-  // The buffer is 64 bytes, laid out as a 4x4 matrix (16 floats)
-  // We need to extract the 2D affine transform from it
-  // Layout appears to be: [a, 0, 0, 0, 0, d, 0, 0, 0, 0, 1, 0, tx, ty, 0, 1]
-  const view = new DataView(transformData.buffer, transformData.byteOffset, 64);
-
-  const transform: Transform = {
-    a: view.getFloat32(0, true),    // [0] scale/rotate x
-    b: view.getFloat32(4, true),    // [1] skew y
-    c: view.getFloat32(16, true),   // [4] skew x
-    d: view.getFloat32(20, true),   // [5] scale/rotate y
-    tx: view.getFloat32(48, true),  // [12] translate x
-    ty: view.getFloat32(52, true),  // [13] translate y
-  };
-
-  // Check if it's an identity transform (no transformation applied)
-  const isIdentity =
-    Math.abs(transform.a - 1) < 0.0001 &&
-    Math.abs(transform.b) < 0.0001 &&
-    Math.abs(transform.c) < 0.0001 &&
-    Math.abs(transform.d - 1) < 0.0001 &&
-    Math.abs(transform.tx) < 0.0001 &&
-    Math.abs(transform.ty) < 0.0001;
-
-  return isIdentity ? undefined : transform;
+  return decodeTransformBuffer(transformData);
 }
 
 /**
  * Extracts brush color from brushProperties object
  */
 function extractBrushColor(obj: PlistObject, objects: PlistObject[]): Color {
-  const defaultColor: Color = { r: 0, g: 0, b: 0, a: 1 }; // Default black
-
   if (!('brushProperties' in obj)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
 
   const brushPropsUID = obj['brushProperties'];
   if (!isUID(brushPropsUID)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
 
   const brushProps = objects[getUIDValue(brushPropsUID)];
   if (!brushProps || !('brushColor' in brushProps)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
 
   const brushColorUID = brushProps['brushColor'];
   if (!isUID(brushColorUID)) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
 
   const colorObj = objects[getUIDValue(brushColorUID)];
   if (!colorObj) {
-    return defaultColor;
+    return { ...DEFAULT_COLOR };
   }
 
   // Extract RGB values (they're in 0-1 range)
@@ -200,7 +169,7 @@ function extractImageItem(obj: PlistObject, objects: PlistObject[]): ImportedIma
   }
 
   // Extract size
-  let size: Point = { x: 100, y: 100 }; // Default size
+  let size: Point = { ...DEFAULT_IMAGE_SIZE };
   if ('size' in obj) {
     const sizeUID = obj['size'];
     if (isUID(sizeUID)) {
@@ -259,7 +228,7 @@ function extractPdfPageItem(obj: PlistObject, objects: PlistObject[]): ImportedI
   }
 
   // Extract size
-  let size: Point = { x: 100, y: 100 }; // Default size
+  let size: Point = { ...DEFAULT_IMAGE_SIZE };
   if ('size' in obj) {
     const sizeUID = obj['size'];
     if (isUID(sizeUID)) {

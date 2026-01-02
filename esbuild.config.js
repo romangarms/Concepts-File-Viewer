@@ -88,6 +88,14 @@ function copyStaticFiles() {
     console.log('✓ Copied styles.css to dist/');
   }
 
+  // Copy favicon.png
+  const faviconSrc = path.join(__dirname, 'favicon.png');
+  const faviconDest = path.join(distDir, 'favicon.png');
+  if (fs.existsSync(faviconSrc)) {
+    fs.copyFileSync(faviconSrc, faviconDest);
+    console.log('✓ Copied favicon.png to dist/');
+  }
+
   // Read and modify index.html for deployment
   const indexSrc = path.join(__dirname, 'index.html');
   const indexDest = path.join(distDir, 'index.html');
@@ -95,6 +103,7 @@ function copyStaticFiles() {
     let html = fs.readFileSync(indexSrc, 'utf8');
     // Fix paths: remove 'dist/' prefix since dist becomes the root on GitHub Pages
     html = html.replace('src="dist/bundle.js"', 'src="./bundle.js"');
+    html = html.replace('href="favicon.png"', 'href="./favicon.png"');
     html = html.replace('href="styles.css"', 'href="./styles.css"');
     fs.writeFileSync(indexDest, html);
     console.log('✓ Copied and updated index.html to dist/');

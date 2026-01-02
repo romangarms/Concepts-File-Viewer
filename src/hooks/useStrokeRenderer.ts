@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { StrokeRenderer } from '../strokeRenderer.js';
-import type { DrawingData } from '../types.js';
+import type { DrawingData } from '../types/index.js';
 
 export function useStrokeRenderer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
