@@ -4,7 +4,12 @@ import { useFileHandler } from '../hooks/useFileHandler.js';
 import { addRecentFile } from '../utils/recentFiles.js';
 import { RecentFiles } from './RecentFiles.js';
 
-export function FileUploader() {
+interface FileUploaderProps {
+  onBrowseDirectory?: () => void;
+  browseError?: string | null;
+}
+
+export function FileUploader({ onBrowseDirectory, browseError }: FileUploaderProps) {
   const navigate = useNavigate();
   const { processFile } = useFileHandler();
   const [status, setStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -116,6 +121,19 @@ export function FileUploader() {
           />
         </div>
       </div>
+
+      {onBrowseDirectory && (
+        <div className="browse-directory-section">
+          <p className="browse-hint">Or browse your iCloud Concepts folder</p>
+          <button className="button secondary" onClick={onBrowseDirectory}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            Select Folder
+          </button>
+          {browseError && <div className="status error">{browseError}</div>}
+        </div>
+      )}
 
       <RecentFiles key={recentFilesKey} />
 

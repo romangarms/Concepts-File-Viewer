@@ -1,42 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUploader } from '../components/FileUploader.js';
-import { DirectorySelector } from '../components/DirectorySelector.js';
-import { restoreDirectoryHandle } from '../utils/handleStorage.js';
-
-type Tab = 'single' | 'directory';
-
-const TAB_STORAGE_KEY = 'concepts-active-tab';
-const GALLERY_PATH_STORAGE_KEY = 'concepts-gallery-path';
+import {
+  isFileSystemAccessSupported,
+  saveDirectoryHandle,
+  restoreDirectoryHandle,
+} from '../utils/handleStorage.js';
 
 export function Home() {
   const navigate = useNavigate();
-
-  // Initialize tab from localStorage or default to 'single'
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const saved = localStorage.getItem(TAB_STORAGE_KEY);
-    return (saved as Tab) || 'single';
-  });
-
   const [guideExpanded, setGuideExpanded] = useState(false);
+  const [dirError, setDirError] = useState<string | null>(null);
 
-  // Save tab selection to localStorage
-  useEffect(() => {
-    localStorage.setItem(TAB_STORAGE_KEY, activeTab);
-  }, [activeTab]);
+  const handleBrowseDirectory = async () => {
+    if (!isFileSystemAccessSupported()) {
+      setDirError('Directory browsing requires Chrome or Edge browser.');
+      return;
+    }
 
-  // Handle tab change - navigate to gallery if directory was already selected
-  const handleTabChange = async (tab: Tab) => {
-    setActiveTab(tab);
+    setDirError(null);
 
-    if (tab === 'directory') {
-      // Check if a directory was already selected
-      const rootHandle = await restoreDirectoryHandle();
-      if (rootHandle) {
-        // Navigate to gallery, which will restore the saved path
-        navigate('/gallery');
+    // Check if a directory was already selected
+    const existingHandle = await restoreDirectoryHandle();
+    if (existingHandle) {
+      navigate('/gallery');
+      return;
+    }
+
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+      await saveDirectoryHandle(dirHandle);
+      navigate('/gallery');
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setDirError(err.message);
       }
-      // If no directory selected, stay on Home and show DirectorySelector
     }
   };
 
@@ -46,24 +44,9 @@ export function Home() {
         <img src="favicon.png" alt="Logo" className="header-logo" />
         <div className="header-text">
           <h1>Concepts File Viewer</h1>
-          <p>View iOS Concepts app drawings in your browser</p>
+          <p>View Concepts app drawings in your browser</p>
         </div>
       </header>
-
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'single' ? 'active' : ''}`}
-          onClick={() => handleTabChange('single')}
-        >
-          Single File
-        </button>
-        <button
-          className={`tab ${activeTab === 'directory' ? 'active' : ''}`}
-          onClick={() => handleTabChange('directory')}
-        >
-          Browse Directory
-        </button>
-      </div>
 
       <div className="guide-section">
         <button
@@ -87,7 +70,7 @@ export function Home() {
         {guideExpanded && (
           <div className="guide-content">
             <div className="guide-column">
-              <h3>Single File</h3>
+              <h3>Drop or Choose File</h3>
               <p>Export a drawing from the Concepts app:</p>
               <ol>
                 <li>Open your drawing in Concepts</li>
@@ -115,9 +98,11 @@ export function Home() {
         )}
       </div>
 
-      <div className="tab-content">
-        {activeTab === 'single' && <FileUploader />}
-        {activeTab === 'directory' && <DirectorySelector />}
+      <div className="main-content">
+        <FileUploader
+          onBrowseDirectory={handleBrowseDirectory}
+          browseError={dirError}
+        />
       </div>
     </div>
   );

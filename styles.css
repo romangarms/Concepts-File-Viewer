@@ -270,6 +270,52 @@ header p {
   overflow: hidden;
 }
 
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.75rem 1.5rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 0.75rem;
+}
+
+.action-bar .button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.browse-directory-section {
+  padding: 1rem 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.browse-hint {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.browse-directory-section .button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Getting Started Guide */
 .guide-section {
   border-bottom: 1px solid #e0e0e0;
