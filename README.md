@@ -1,6 +1,7 @@
 # Concepts File Viewer
+[Open the Concepts File Viewer in your browser here](https://romangarms.com/Concepts-File-Viewer/)
 
-Web-based viewer for iOS Concepts app files (.concept format).
+Web-based viewer for iOS Concepts app files (.concept/.concepts format).
 
 ## Features
 
@@ -19,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:8000 and drag a .concept file onto the page.
+Open http://localhost:8000 and drag a .concept(s) file onto the page.
 
 ## Development
 
