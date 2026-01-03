@@ -11,6 +11,7 @@ const sharedConfig = {
   platform: 'browser',
   loader: { '.tsx': 'tsx', '.ts': 'ts' },
   jsx: 'automatic',
+  minify: !isWatch,
   define: {
     'global': 'window',
     'process.env.NODE_ENV': '"production"'
