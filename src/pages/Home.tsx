@@ -93,7 +93,7 @@ export function Home() {
                 <li>
                   <strong>Windows:</strong> Install <a href="https://support.apple.com/en-us/HT204283" target="_blank" rel="noopener noreferrer">iCloud for Windows</a>
                 </li>
-                <li>Click "Select Folder" and navigate to: <code>iCloud Drive/Concepts/drawings/</code></li>
+                <li>Click "Select Folder" and navigate to: <code>iCloud Drive/Concepts/</code></li>
               </ol>
             </div>
           </div>
