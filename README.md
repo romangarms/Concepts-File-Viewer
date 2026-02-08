@@ -1,4 +1,7 @@
 # Concepts File Viewer
+
+![Screenshot of user interface](/screenshots/Concepts%20File%20Viewer%20Screenshot.png)
+
 [Open the Concepts File Viewer in your browser here](https://romangarms.com/Concepts-File-Viewer/)
 
 Web-based viewer for iOS Concepts app files (.concept/.concepts format).
